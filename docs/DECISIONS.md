@@ -6,6 +6,8 @@ Append-only, newest first. Format: decision · alternatives · rationale (≤2 s
 
 ## 2026-06-11 — Kickoff decisions
 
+**D-009: Stay on compileSdk 36.1; pin core-ktx to 1.17.0** — alt: bump compileSdk to 37 (requires downloading platform android-37; only 36.1 installed). Smallest change that keeps the toolchain matching the installed SDK; revisit when targeting API 37. Reversibility: easy.
+
 **D-008: kotlinx.serialization over Moshi** — alt: Moshi+KSP, Gson. Kotlin-first, compile-time, no reflection; pairs with Retrofit via official converter. Reversibility: easy.
 
 **D-007: Coil 3 for image loading** — alt: Glide. Compose-native API, coroutines-based, active Compose support. Reversibility: easy.
