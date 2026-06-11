@@ -4,7 +4,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.example.tmdb.core.designsystem.theme.TMDBTheme
+import com.example.tmdb.core.navigation.MoviesRoute
 import com.example.tmdb.feature.movies.MoviesScreen
 
 class MainActivity : ComponentActivity() {
@@ -13,8 +17,15 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             TMDBTheme {
-                // Placeholder entry point; the NavHost over :core:navigation routes lands in Milestone 1.
-                MoviesScreen()
+                val navController = rememberNavController()
+                NavHost(navController = navController, startDestination = MoviesRoute) {
+                    composable<MoviesRoute> {
+                        MoviesScreen(
+                            // Detail destination lands in Milestone 2.
+                            onMovieClick = {},
+                        )
+                    }
+                }
             }
         }
     }
