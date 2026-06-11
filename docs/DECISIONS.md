@@ -6,6 +6,10 @@ Append-only, newest first. Format: decision · alternatives · rationale (≤2 s
 
 ## 2026-06-11 — Kickoff decisions
 
+**D-011: Coil pinned to 3.4.0** — alt: upgrade project Kotlin past 2.2.10 to read Coil 3.5.0's Kotlin 2.4.0 metadata. Kotlin version is coupled to AGP 9.2.1 built-in Kotlin; bumping it for an image library is disproportionate. Reversibility: easy.
+
+**D-010 (amends D-004): token check fails only the :app assemble path, not configuration** — alt: configuration-time failure everywhere. Library compilation and all JVM tests must stay runnable without a secret; `:app:checkTmdbToken` (wired into preBuild) fails with an actionable message, `-PskipTokenCheck=true` overrides for CI. Reversibility: easy.
+
 **D-009: Stay on compileSdk 36.1; pin core-ktx to 1.17.0** — alt: bump compileSdk to 37 (requires downloading platform android-37; only 36.1 installed). Smallest change that keeps the toolchain matching the installed SDK; revisit when targeting API 37. Reversibility: easy.
 
 **D-008: kotlinx.serialization over Moshi** — alt: Moshi+KSP, Gson. Kotlin-first, compile-time, no reflection; pairs with Retrofit via official converter. Reversibility: easy.

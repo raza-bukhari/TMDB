@@ -15,6 +15,8 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                 // Robolectric needs android resources on the unit-test classpath
                 testOptions.unitTests.isIncludeAndroidResources = true
             }
+            dependencies.add("implementation", dependencies.platform(libs.lib("koin-bom")))
+            dependencies.add("implementation", libs.lib("koin-core"))
             dependencies.add("testImplementation", libs.lib("junit"))
             dependencies.add("testImplementation", libs.lib("kotlinx-coroutines-test"))
         }

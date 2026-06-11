@@ -22,6 +22,8 @@ class KotlinJvmConventionPlugin : Plugin<Project> {
                 }
             }
             dependencies.add("implementation", libs.lib("kotlinx-coroutines-core"))
+            dependencies.add("implementation", dependencies.platform(libs.lib("koin-bom")))
+            dependencies.add("implementation", libs.lib("koin-core"))
             dependencies.add("testImplementation", libs.lib("junit"))
             dependencies.add("testImplementation", libs.lib("kotlinx-coroutines-test"))
             dependencies.add("testImplementation", libs.lib("turbine"))
