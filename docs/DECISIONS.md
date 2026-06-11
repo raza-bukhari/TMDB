@@ -4,6 +4,12 @@ Append-only, newest first. Format: decision · alternatives · rationale (≤2 s
 
 ---
 
+## 2026-06-12 — Milestones 4–5
+
+**D-014: Kover applied per-module, not aggregated at root** — alt: root `kover(project(...))` aggregation. Cross-project Kover can't resolve Android library variants without per-module variant config; per-module `koverVerify` is robust and single-Android-module Kover needs no variant wiring. Each measured module (`:domain` + 3 features) carries its own 80% rule. Reversibility: easy.
+
+**D-013: Category list pagination is append-by-page in the Room cache, orderIndex = (page-1)*20 + index** — alt: store a page column / Paging 3. TMDB returns 20/page; a monotonic orderIndex keeps the cache ranked across appended pages with no extra schema. Reversibility: easy (revisits D-002 if jank appears).
+
 ## 2026-06-11 — Kickoff decisions
 
 **D-011: Coil pinned to 3.4.0** — alt: upgrade project Kotlin past 2.2.10 to read Coil 3.5.0's Kotlin 2.4.0 metadata. Kotlin version is coupled to AGP 9.2.1 built-in Kotlin; bumping it for an image library is disproportionate. Reversibility: easy.
