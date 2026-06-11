@@ -18,4 +18,10 @@ interface TmdbApi {
     suspend fun movieDetail(
         @Path("movie_id") movieId: Long,
     ): MovieDetailDto
+
+    @GET("search/movie")
+    suspend fun searchMovies(
+        @Query("query") query: String,
+        @Query("page") page: Int = 1,
+    ): PagedResponseDto<MovieDto>
 }

@@ -3,6 +3,7 @@ package com.example.tmdb.domain.repository
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
+import com.example.tmdb.domain.model.SearchResults
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -19,4 +20,7 @@ interface MovieRepository {
     fun observeMovieDetail(id: MovieId): Flow<MovieDetail?>
 
     suspend fun refreshMovieDetail(id: MovieId): Result<Unit>
+
+    /** Network-only (D-006); results are never cached. */
+    suspend fun searchMovies(query: String, page: Int = 1): Result<SearchResults>
 }

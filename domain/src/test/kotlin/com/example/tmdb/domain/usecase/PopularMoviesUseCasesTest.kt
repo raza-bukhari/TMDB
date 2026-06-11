@@ -5,6 +5,7 @@ import com.example.tmdb.domain.model.AppException
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
+import com.example.tmdb.domain.model.SearchResults
 import com.example.tmdb.domain.model.appErrorOrNull
 import com.example.tmdb.domain.repository.MovieRepository
 import java.time.LocalDate
@@ -47,6 +48,9 @@ private class FakeMovieRepository(
         refreshCalls++
         return refreshResult
     }
+
+    override suspend fun searchMovies(query: String, page: Int): Result<SearchResults> =
+        Result.success(SearchResults(emptyList(), page, page))
 }
 
 class PopularMoviesUseCasesTest {

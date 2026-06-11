@@ -4,9 +4,11 @@ import com.example.tmdb.core.database.MovieDetailEntity
 import com.example.tmdb.core.database.MovieEntity
 import com.example.tmdb.core.network.dto.MovieDetailDto
 import com.example.tmdb.core.network.dto.MovieDto
+import com.example.tmdb.core.network.dto.PagedResponseDto
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
+import com.example.tmdb.domain.model.SearchResults
 import java.time.LocalDate
 
 private const val GENRE_SEPARATOR = "|"
@@ -50,6 +52,24 @@ internal fun MovieDetailEntity.toDomain(): MovieDetail = MovieDetail(
     voteAverage = voteAverage,
     voteCount = voteCount,
     genres = genres.split(GENRE_SEPARATOR).filter { it.isNotBlank() },
+)
+
+// Search results skip Room entirely (D-006), so DTOs map straight to domain.
+internal fun MovieDto.toDomain(): Movie = Movie(
+    id = MovieId(id),
+    title = title,
+    overview = overview,
+    posterPath = posterPath,
+    backdropPath = backdropPath,
+    releaseDate = parseDate(releaseDate),
+    voteAverage = voteAverage,
+    voteCount = voteCount,
+)
+
+internal fun PagedResponseDto<MovieDto>.toSearchResults(): SearchResults = SearchResults(
+    movies = results.map { it.toDomain() },
+    page = page,
+    totalPages = totalPages,
 )
 
 internal fun MovieEntity.toDomain(): Movie = Movie(

@@ -4,6 +4,7 @@ import com.example.tmdb.domain.model.AppError
 import com.example.tmdb.domain.model.AppException
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
+import com.example.tmdb.domain.model.SearchResults
 import com.example.tmdb.domain.model.appErrorOrNull
 import com.example.tmdb.domain.repository.MovieRepository
 import kotlinx.coroutines.flow.Flow
@@ -37,6 +38,8 @@ private class FakeDetailRepository(
 
     override fun observePopularMovies() = emptyFlow<Nothing>()
     override suspend fun refreshPopularMovies(): Result<Unit> = Result.success(Unit)
+    override suspend fun searchMovies(query: String, page: Int): Result<SearchResults> =
+        Result.success(SearchResults(emptyList(), page, page))
 
     override fun observeMovieDetail(id: MovieId): Flow<MovieDetail?> {
         lastRequestedId = id

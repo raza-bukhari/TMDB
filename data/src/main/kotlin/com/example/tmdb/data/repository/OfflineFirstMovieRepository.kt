@@ -8,9 +8,11 @@ import com.example.tmdb.core.network.TmdbApi
 import com.example.tmdb.core.network.tmdbCall
 import com.example.tmdb.data.mapper.toDomain
 import com.example.tmdb.data.mapper.toEntity
+import com.example.tmdb.data.mapper.toSearchResults
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
+import com.example.tmdb.domain.model.SearchResults
 import com.example.tmdb.domain.repository.MovieRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
@@ -41,6 +43,11 @@ internal class OfflineFirstMovieRepository(
                     },
                 )
             }
+        }
+
+    override suspend fun searchMovies(query: String, page: Int): Result<SearchResults> =
+        withContext(dispatchers.io) {
+            tmdbCall { api.searchMovies(query = query, page = page) }.map { it.toSearchResults() }
         }
 
     override fun observeMovieDetail(id: MovieId): Flow<MovieDetail?> =

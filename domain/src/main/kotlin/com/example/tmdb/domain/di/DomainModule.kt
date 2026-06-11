@@ -4,6 +4,7 @@ import com.example.tmdb.domain.usecase.ObserveMovieDetailUseCase
 import com.example.tmdb.domain.usecase.ObservePopularMoviesUseCase
 import com.example.tmdb.domain.usecase.RefreshMovieDetailUseCase
 import com.example.tmdb.domain.usecase.RefreshPopularMoviesUseCase
+import com.example.tmdb.domain.usecase.SearchMoviesUseCase
 import org.koin.core.module.dsl.factoryOf
 import org.koin.dsl.module
 
@@ -12,4 +13,5 @@ val domainModule = module {
     factoryOf(::RefreshPopularMoviesUseCase)
     factoryOf(::ObserveMovieDetailUseCase)
     factoryOf(::RefreshMovieDetailUseCase)
+    factoryOf(::SearchMoviesUseCase)
 }

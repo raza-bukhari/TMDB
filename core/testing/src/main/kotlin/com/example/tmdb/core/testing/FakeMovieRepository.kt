@@ -3,6 +3,7 @@ package com.example.tmdb.core.testing
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
+import com.example.tmdb.domain.model.SearchResults
 import com.example.tmdb.domain.repository.MovieRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +32,19 @@ class FakeMovieRepository : MovieRepository {
             onRefreshCachePopulation?.let { moviesFlow.value = it() }
         }
         return refreshResult
+    }
+
+    /** Queue of (query, page) pairs received by [searchMovies], oldest first. */
+    val searchCalls = mutableListOf<Pair<String, Int>>()
+
+    /** Programmable search behaviour; defaults to one empty page. */
+    var onSearch: (query: String, page: Int) -> Result<SearchResults> = { _, page ->
+        Result.success(SearchResults(movies = emptyList(), page = page, totalPages = page))
+    }
+
+    override suspend fun searchMovies(query: String, page: Int): Result<SearchResults> {
+        searchCalls += query to page
+        return onSearch(query, page)
     }
 
     override fun observeMovieDetail(id: MovieId): Flow<MovieDetail?> {
