@@ -10,8 +10,10 @@ import androidx.navigation.compose.rememberNavController
 import com.example.tmdb.core.designsystem.theme.TMDBTheme
 import com.example.tmdb.core.navigation.MovieDetailRoute
 import com.example.tmdb.core.navigation.MoviesRoute
+import com.example.tmdb.core.navigation.SearchRoute
 import com.example.tmdb.feature.detail.MovieDetailScreen
 import com.example.tmdb.feature.movies.MoviesScreen
+import com.example.tmdb.feature.search.SearchScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,10 +28,19 @@ class MainActivity : ComponentActivity() {
                             onMovieClick = { movieId ->
                                 navController.navigate(MovieDetailRoute(movieId))
                             },
+                            onSearchClick = { navController.navigate(SearchRoute) },
                         )
                     }
                     composable<MovieDetailRoute> {
                         MovieDetailScreen(
+                            onBackClick = { navController.popBackStack() },
+                        )
+                    }
+                    composable<SearchRoute> {
+                        SearchScreen(
+                            onMovieClick = { movieId ->
+                                navController.navigate(MovieDetailRoute(movieId))
+                            },
                             onBackClick = { navController.popBackStack() },
                         )
                     }

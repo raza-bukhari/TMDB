@@ -31,6 +31,7 @@ class MoviesScreenTest {
                     state = MoviesUiState(content = MoviesContent.Movies(movies)),
                     onRetryClick = {},
                     onMovieClick = {},
+                    onSearchClick = {},
                 )
             }
         }
@@ -49,6 +50,7 @@ class MoviesScreenTest {
                     state = MoviesUiState(content = MoviesContent.Movies(movies)),
                     onRetryClick = {},
                     onMovieClick = { clicked = it },
+                    onSearchClick = {},
                 )
             }
         }
@@ -56,6 +58,25 @@ class MoviesScreenTest {
         composeRule.onNodeWithTag(MoviesTestTags.movieCard(550)).performClick()
 
         assertEquals(550L, clicked)
+    }
+
+    @Test
+    fun givenMoviesScreen_whenSearchClicked_thenSearchCallbackFires() {
+        var searched = false
+        composeRule.setContent {
+            TMDBTheme {
+                MoviesScreenContent(
+                    state = MoviesUiState(content = MoviesContent.Movies(movies)),
+                    onRetryClick = {},
+                    onMovieClick = {},
+                    onSearchClick = { searched = true },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(MoviesTestTags.SEARCH).performClick()
+
+        assertEquals(true, searched)
     }
 
     @Test
@@ -67,6 +88,7 @@ class MoviesScreenTest {
                     state = MoviesUiState(content = MoviesContent.Error(AppError.Offline)),
                     onRetryClick = { retried = true },
                     onMovieClick = {},
+                    onSearchClick = {},
                 )
             }
         }
@@ -85,6 +107,7 @@ class MoviesScreenTest {
                     state = MoviesUiState(content = MoviesContent.Loading),
                     onRetryClick = {},
                     onMovieClick = {},
+                    onSearchClick = {},
                 )
             }
         }

@@ -2,15 +2,26 @@ package com.example.tmdb.feature.movies
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
@@ -28,12 +39,14 @@ import org.koin.androidx.compose.koinViewModel
 
 object MoviesTestTags {
     const val GRID = "movies_grid"
+    const val SEARCH = "movies_search_button"
     fun movieCard(id: Long) = "movie_card_$id"
 }
 
 @Composable
 fun MoviesScreen(
     onMovieClick: (Long) -> Unit,
+    onSearchClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val viewModel: MoviesViewModel = koinViewModel()
@@ -51,6 +64,7 @@ fun MoviesScreen(
         state = state,
         onRetryClick = viewModel::onRetryClicked,
         onMovieClick = viewModel::onMovieClicked,
+        onSearchClick = onSearchClick,
         modifier = modifier,
     )
 }
@@ -60,13 +74,44 @@ internal fun MoviesScreenContent(
     state: MoviesUiState,
     onRetryClick: () -> Unit,
     onMovieClick: (Long) -> Unit,
+    onSearchClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(
+    Column(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding(),
     ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 4.dp),
+        ) {
+            Text(
+                text = "Popular Movies",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(
+                onClick = onSearchClick,
+                modifier = Modifier.testTag(MoviesTestTags.SEARCH),
+            ) {
+                Icon(Icons.Filled.Search, contentDescription = "Search movies")
+            }
+        }
+        MoviesBody(state = state, onRetryClick = onRetryClick, onMovieClick = onMovieClick)
+    }
+}
+
+@Composable
+private fun MoviesBody(
+    state: MoviesUiState,
+    onRetryClick: () -> Unit,
+    onMovieClick: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier.fillMaxSize()) {
         when (val content = state.content) {
             MoviesContent.Loading -> LoadingState()
             MoviesContent.Empty -> EmptyState(message = "No movies right now. Check back later.")
@@ -127,6 +172,7 @@ private fun MoviesScreenContentPreview() {
             ),
             onRetryClick = {},
             onMovieClick = {},
+            onSearchClick = {},
         )
     }
 }
@@ -139,6 +185,7 @@ private fun MoviesScreenErrorPreview() {
             state = MoviesUiState(content = MoviesContent.Error(AppError.Offline)),
             onRetryClick = {},
             onMovieClick = {},
+            onSearchClick = {},
         )
     }
 }

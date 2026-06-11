@@ -7,6 +7,7 @@ import com.example.tmdb.data.di.dataModule
 import com.example.tmdb.domain.di.domainModule
 import com.example.tmdb.feature.detail.di.featureDetailModule
 import com.example.tmdb.feature.movies.di.featureMoviesModule
+import com.example.tmdb.feature.search.di.featureSearchModule
 import org.koin.core.module.Module
 
 /** One Koin module per Gradle module, aggregated here and only here. */
@@ -18,4 +19,5 @@ val appModules: List<Module> = listOf(
     dataModule,
     featureMoviesModule,
     featureDetailModule,
+    featureSearchModule,
 )

@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.tmdb.feature.movies"
+    namespace = "com.example.tmdb.feature.search"
 }
 
 dependencies {

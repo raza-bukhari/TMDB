@@ -11,3 +11,6 @@ data object MoviesRoute
 
 @Serializable
 data class MovieDetailRoute(val movieId: Long)
+
+@Serializable
+data object SearchRoute
