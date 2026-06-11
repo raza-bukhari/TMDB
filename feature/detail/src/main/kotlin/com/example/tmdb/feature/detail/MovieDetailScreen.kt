@@ -22,7 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.tooling.preview.Preview
+import com.example.tmdb.core.designsystem.ThemePreviews
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
@@ -140,7 +140,7 @@ internal fun AppError.toUserMessage(): String = when (this) {
     is AppError.Unknown -> "Something went wrong. Please try again."
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
 private fun MovieDetailPreview() {
     TMDBTheme {
@@ -167,7 +167,7 @@ private fun MovieDetailPreview() {
     }
 }
 
-@Preview(showBackground = true)
+@ThemePreviews
 @Composable
 private fun MovieDetailErrorPreview() {
     TMDBTheme {

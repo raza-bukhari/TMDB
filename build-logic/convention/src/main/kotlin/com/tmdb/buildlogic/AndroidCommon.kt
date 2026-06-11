@@ -19,5 +19,9 @@ internal fun configureAndroidCommon(commonExtension: CommonExtension) {
         defaultConfig.minSdk = 26
         compileOptions.sourceCompatibility = JavaVersion.VERSION_11
         compileOptions.targetCompatibility = JavaVersion.VERSION_11
+        lint.warningsAsErrors = true
+        // Advisory "a newer version exists" nags on versions we pin deliberately for
+        // toolchain compatibility (see docs/DECISIONS.md D-009/D-011) — not defects.
+        lint.disable.addAll(setOf("NewerVersionAvailable", "GradleDependency", "AndroidGradlePluginVersion"))
     }
 }
