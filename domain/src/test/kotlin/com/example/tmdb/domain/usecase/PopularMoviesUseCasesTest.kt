@@ -3,6 +3,7 @@ package com.example.tmdb.domain.usecase
 import com.example.tmdb.domain.model.AppError
 import com.example.tmdb.domain.model.AppException
 import com.example.tmdb.domain.model.Movie
+import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
 import com.example.tmdb.domain.model.appErrorOrNull
 import com.example.tmdb.domain.repository.MovieRepository
@@ -30,11 +31,19 @@ private class FakeMovieRepository(
     var refreshResult: Result<Unit> = Result.success(Unit),
 ) : MovieRepository {
     val movies = MutableStateFlow<List<Movie>>(emptyList())
+    val detail = MutableStateFlow<MovieDetail?>(null)
     var refreshCalls = 0
 
     override fun observePopularMovies(): Flow<List<Movie>> = movies
 
     override suspend fun refreshPopularMovies(): Result<Unit> {
+        refreshCalls++
+        return refreshResult
+    }
+
+    override fun observeMovieDetail(id: MovieId): Flow<MovieDetail?> = detail
+
+    override suspend fun refreshMovieDetail(id: MovieId): Result<Unit> {
         refreshCalls++
         return refreshResult
     }

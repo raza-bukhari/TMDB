@@ -4,14 +4,13 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.cash.turbine.test
 import com.example.tmdb.core.common.DispatcherProvider
-import com.example.tmdb.core.database.MovieCategories
-import com.example.tmdb.core.database.MovieEntity
 import com.example.tmdb.core.database.TmdbDatabase
 import com.example.tmdb.core.network.TmdbApi
 import com.example.tmdb.domain.model.AppError
 import com.example.tmdb.domain.model.MovieId
 import com.example.tmdb.domain.model.appErrorOrNull
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -20,6 +19,7 @@ import mockwebserver3.MockWebServer
 import okhttp3.MediaType.Companion.toMediaType
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -27,12 +27,9 @@ import org.robolectric.RobolectricTestRunner
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
-/**
- * End-to-end data-layer integration: MockWebServer → Retrofit → Room → Flow.
- */
-@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-class OfflineFirstMovieRepositoryTest {
+class MovieDetailRepositoryTest {
 
     private lateinit var server: MockWebServer
     private lateinit var db: TmdbDatabase
@@ -78,39 +75,34 @@ class OfflineFirstMovieRepositoryTest {
     }
 
     @Test
-    fun `given an empty cache, when refreshing, then observers see empty then the fetched page in TMDB order`() = runTest {
-        server.enqueue(MockResponse.Builder().code(200).body(fixture("popular_page_1.json")).build())
+    fun `given an uncached movie, when refreshing detail, then observers see null then the cached detail`() = runTest {
+        server.enqueue(MockResponse.Builder().code(200).body(fixture("movie_detail_550.json")).build())
 
-        repository.observePopularMovies().test {
-            assertEquals(emptyList<Nothing>(), awaitItem())
+        repository.observeMovieDetail(MovieId(550)).test {
+            assertNull(awaitItem())
 
-            val refresh = repository.refreshPopularMovies()
+            val refresh = repository.refreshMovieDetail(MovieId(550))
             assertEquals(true, refresh.isSuccess)
 
-            val refreshed = awaitItem()
-            assertEquals(listOf(MovieId(550), MovieId(603), MovieId(999999)), refreshed.map { it.id })
+            val detail = awaitItem()
+            assertEquals("Fight Club", detail?.title)
+            assertEquals(listOf("Drama", "Thriller", "Comedy"), detail?.genres)
+            assertEquals(139, detail?.runtimeMinutes)
             cancelAndIgnoreRemainingEvents()
         }
     }
 
     @Test
-    fun `given a populated cache, when refresh fails, then cached movies remain and the error is typed`() = runTest {
-        db.movieDao().insertAll(
-            listOf(
-                MovieEntity(
-                    id = 1, category = MovieCategories.POPULAR, orderIndex = 0,
-                    title = "Cached", overview = "", posterPath = null, backdropPath = null,
-                    releaseDate = null, voteAverage = 5.0, voteCount = 1,
-                ),
-            ),
+    fun `given TMDB returns 404, when refreshing detail, then the error is typed and nothing is cached`() = runTest {
+        server.enqueue(
+            MockResponse.Builder().code(404).body("""{"status_code":34,"status_message":"not found"}""").build(),
         )
-        server.enqueue(MockResponse.Builder().code(401).body(fixture("error_401.json")).build())
 
-        val result = repository.refreshPopularMovies()
+        val result = repository.refreshMovieDetail(MovieId(42))
 
-        assertEquals(AppError.InvalidToken, result.appErrorOrNull())
-        repository.observePopularMovies().test {
-            assertEquals(listOf(MovieId(1)), awaitItem().map { it.id })
+        assertEquals(AppError.NotFound, result.appErrorOrNull())
+        repository.observeMovieDetail(MovieId(42)).test {
+            assertNull(awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
     }
