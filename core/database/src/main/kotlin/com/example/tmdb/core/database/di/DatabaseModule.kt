@@ -1,7 +1,14 @@
 package com.example.tmdb.core.database.di
 
+import androidx.room.Room
+import com.example.tmdb.core.database.MovieDao
+import com.example.tmdb.core.database.TmdbDatabase
+import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
 val databaseModule = module {
-    // Room database + DAO singles registered in Milestone 1.
+    single<TmdbDatabase> {
+        Room.databaseBuilder(androidContext(), TmdbDatabase::class.java, "tmdb.db").build()
+    }
+    single<MovieDao> { get<TmdbDatabase>().movieDao() }
 }
