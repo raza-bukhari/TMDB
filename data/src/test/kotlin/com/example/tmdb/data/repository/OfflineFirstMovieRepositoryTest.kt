@@ -30,6 +30,7 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 /**
  * End-to-end data-layer integration: MockWebServer → Retrofit → Room → Flow.
  */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 class OfflineFirstMovieRepositoryTest {
 
