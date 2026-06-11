@@ -43,6 +43,7 @@ tasks.named("preBuild") { dependsOn(checkTmdbToken) }
 
 dependencies {
     implementation(project(":feature:movies"))
+    implementation(project(":feature:detail"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:navigation"))
     implementation(project(":core:common"))

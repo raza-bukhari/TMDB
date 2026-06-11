@@ -8,3 +8,6 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data object MoviesRoute
+
+@Serializable
+data class MovieDetailRoute(val movieId: Long)

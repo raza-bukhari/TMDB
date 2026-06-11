@@ -8,7 +8,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.tmdb.core.designsystem.theme.TMDBTheme
+import com.example.tmdb.core.navigation.MovieDetailRoute
 import com.example.tmdb.core.navigation.MoviesRoute
+import com.example.tmdb.feature.detail.MovieDetailScreen
 import com.example.tmdb.feature.movies.MoviesScreen
 
 class MainActivity : ComponentActivity() {
@@ -21,8 +23,14 @@ class MainActivity : ComponentActivity() {
                 NavHost(navController = navController, startDestination = MoviesRoute) {
                     composable<MoviesRoute> {
                         MoviesScreen(
-                            // Detail destination lands in Milestone 2.
-                            onMovieClick = {},
+                            onMovieClick = { movieId ->
+                                navController.navigate(MovieDetailRoute(movieId))
+                            },
+                        )
+                    }
+                    composable<MovieDetailRoute> {
+                        MovieDetailScreen(
+                            onBackClick = { navController.popBackStack() },
                         )
                     }
                 }

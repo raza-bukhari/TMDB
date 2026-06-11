@@ -1,5 +1,6 @@
 package com.example.tmdb
 
+import androidx.lifecycle.SavedStateHandle
 import org.koin.core.annotation.KoinExperimentalAPI
 import org.koin.dsl.module
 import org.koin.test.verify.verify
@@ -10,6 +11,7 @@ class KoinModulesTest {
     @OptIn(KoinExperimentalAPI::class)
     @Test
     fun `koin graph is valid`() {
-        module { includes(appModules) }.verify()
+        // SavedStateHandle is provided by the ViewModel factory at runtime, not the graph.
+        module { includes(appModules) }.verify(extraTypes = listOf(SavedStateHandle::class))
     }
 }

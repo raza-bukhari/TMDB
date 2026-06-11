@@ -12,6 +12,7 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
             pluginManager.apply("com.android.library")
             extensions.configure<LibraryExtension> {
                 configureAndroidCommon(this)
+                defaultConfig.testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
                 // Robolectric needs android resources on the unit-test classpath
                 testOptions.unitTests.isIncludeAndroidResources = true
             }

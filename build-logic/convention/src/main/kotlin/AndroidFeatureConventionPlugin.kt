@@ -25,6 +25,8 @@ class AndroidFeatureConventionPlugin : Plugin<Project> {
                 add("implementation", libs.lib("androidx-navigation-compose"))
                 add("implementation", libs.lib("kotlinx-collections-immutable"))
                 add("implementation", libs.lib("coil-compose"))
+                // Coil 3 ships network loading separately; without this AsyncImage renders nothing.
+                add("implementation", libs.lib("coil-network-okhttp"))
 
                 add("testImplementation", project(":core:testing"))
                 add("testImplementation", libs.lib("turbine"))
