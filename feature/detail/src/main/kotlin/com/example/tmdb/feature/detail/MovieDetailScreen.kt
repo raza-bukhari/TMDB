@@ -1,5 +1,6 @@
 package com.example.tmdb.feature.detail
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -7,9 +8,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -21,6 +25,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import com.example.tmdb.core.designsystem.ThemePreviews
 import androidx.compose.ui.unit.dp
@@ -72,15 +79,20 @@ internal fun MovieDetailScreenContent(
                 )
                 is MovieDetailContent.Detail -> DetailBody(content.detail)
             }
+            // Circular scrim keeps the back button legible over a bright backdrop.
             IconButton(
                 onClick = onBackClick,
                 modifier = Modifier
                     .statusBarsPadding()
+                    .padding(4.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.35f))
                     .testTag(DetailTestTags.BACK),
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
+                    tint = Color.White,
                 )
             }
         }
@@ -94,15 +106,32 @@ private fun DetailBody(detail: MovieDetailUi, modifier: Modifier = Modifier) {
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
     ) {
-        AsyncImage(
-            model = detail.backdropUrl ?: detail.posterUrl,
-            contentDescription = detail.title,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(16f / 9f),
-        )
+        // Backdrop draws edge-to-edge behind the status bar; a bottom gradient blends into content.
+        Box {
+            AsyncImage(
+                model = detail.backdropUrl ?: detail.posterUrl,
+                contentDescription = detail.title,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f),
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp)
+                    .align(androidx.compose.ui.Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Transparent, MaterialTheme.colorScheme.surface),
+                        ),
+                    ),
+            )
+        }
         Column(
-            modifier = Modifier.padding(16.dp),
+            // navigationBars inset so the overview clears the gesture bar.
+            modifier = Modifier
+                .navigationBarsPadding()
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(text = detail.title, style = MaterialTheme.typography.headlineMedium)

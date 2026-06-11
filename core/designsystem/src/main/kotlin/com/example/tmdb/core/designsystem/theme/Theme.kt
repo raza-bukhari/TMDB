@@ -24,6 +24,21 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun TMDBTheme(
+    themeMode: ThemeMode,
+    // Dynamic color is available on Android 12+
+    dynamicColor: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    val darkTheme = when (themeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+    TMDBTheme(darkTheme = darkTheme, dynamicColor = dynamicColor, content = content)
+}
+
+@Composable
+fun TMDBTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,

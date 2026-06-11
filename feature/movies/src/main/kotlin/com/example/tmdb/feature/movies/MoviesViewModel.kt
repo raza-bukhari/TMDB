@@ -42,6 +42,8 @@ internal class MoviesViewModel(
     private val pageByCategory = mutableMapOf<MovieCategory, MoviePage>()
     private val refreshedCategories = mutableSetOf<MovieCategory>()
 
+    private val filters = MutableStateFlow(MovieFilters())
+
     private val _effects = Channel<MoviesEffect>(Channel.BUFFERED)
     val effects: Flow<MoviesEffect> = _effects.receiveAsFlow()
 
@@ -51,18 +53,24 @@ internal class MoviesViewModel(
             // shown list never disagree mid-switch; flatMapLatest cancels the old tab's DB query.
             selectedCategory.flatMapLatest { category -> observeMovies(category).map { category to it } },
             status,
-        ) { (category, movies), st ->
+            filters,
+        ) { (category, movies), st, activeFilters ->
+            val visible = movies.applyFilters(activeFilters)
             MoviesUiState(
                 selectedCategory = category,
                 isRefreshing = st.isRefreshing,
+                filters = activeFilters,
                 content = when {
-                    movies.isNotEmpty() -> MoviesContent.Movies(
-                        movies = movies.map { it.toListItem() }.toImmutableList(),
+                    visible.isNotEmpty() -> MoviesContent.Movies(
+                        movies = visible.map { it.toListItem() }.toImmutableList(),
+                        // Appending more pages only makes sense in the unfiltered/default view.
                         isAppending = st.isAppending,
-                        canLoadMore = st.canLoadMore,
+                        canLoadMore = st.canLoadMore && activeFilters.isDefault,
                         // Cache wins, but flag a failed refresh so the UI can warn non-blockingly.
                         staleError = st.error,
                     )
+                    // Cache has movies but the filters exclude them all.
+                    movies.isNotEmpty() -> MoviesContent.NoMatches
                     st.isRefreshing -> MoviesContent.Loading
                     st.error != null -> MoviesContent.Error(st.error)
                     else -> MoviesContent.Empty
@@ -117,6 +125,14 @@ internal class MoviesViewModel(
 
     fun onMovieClicked(movieId: Long) {
         viewModelScope.launch { _effects.send(MoviesEffect.NavigateToDetail(movieId)) }
+    }
+
+    fun onFiltersChanged(newFilters: MovieFilters) {
+        filters.value = newFilters
+    }
+
+    fun onFiltersReset() {
+        filters.value = MovieFilters()
     }
 
     private fun refresh(category: MovieCategory) {

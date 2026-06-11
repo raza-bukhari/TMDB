@@ -59,7 +59,7 @@ class MoviesViewModelTest {
             assertEquals(MoviesContent.Loading, awaitItem().content)
             val loaded = expectMostRecentItemAfter { it.content is MoviesContent.Movies && !it.isRefreshing }
             assertEquals(
-                MovieListItem(550, "Fight Club", "https://image.tmdb.org/t/p/w342/p550.jpg", 7.5),
+                MovieListItem(550, "Fight Club", "https://image.tmdb.org/t/p/w342/p550.jpg", 7.5, null),
                 (loaded.content as MoviesContent.Movies).movies.single(),
             )
         }

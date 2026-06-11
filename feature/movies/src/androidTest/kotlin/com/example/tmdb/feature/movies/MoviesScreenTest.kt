@@ -21,8 +21,8 @@ class MoviesScreenTest {
     val composeRule = createComposeRule()
 
     private val movies = persistentListOf(
-        MovieListItem(550, "Fight Club", null, 8.4),
-        MovieListItem(603, "The Matrix", null, 8.2),
+        MovieListItem(550, "Fight Club", null, 8.4, "1999"),
+        MovieListItem(603, "The Matrix", null, 8.2, "1999"),
     )
 
     @Composable
@@ -33,16 +33,22 @@ class MoviesScreenTest {
         onRefresh: () -> Unit = {},
         onMovieClick: (Long) -> Unit = {},
         onLoadMoreRequested: () -> Unit = {},
+        onFiltersChanged: (MovieFilters) -> Unit = {},
+        onFiltersReset: () -> Unit = {},
         onSearchClick: () -> Unit = {},
     ) {
-        TMDBTheme {
+        TMDBTheme(themeMode = com.example.tmdb.core.designsystem.theme.ThemeMode.SYSTEM) {
             MoviesScreenContent(
                 state = state,
+                themeMode = com.example.tmdb.core.designsystem.theme.ThemeMode.SYSTEM,
+                onToggleTheme = {},
                 onCategorySelected = onCategorySelected,
                 onRetryClick = onRetryClick,
                 onRefresh = onRefresh,
                 onMovieClick = onMovieClick,
                 onLoadMoreRequested = onLoadMoreRequested,
+                onFiltersChanged = onFiltersChanged,
+                onFiltersReset = onFiltersReset,
                 onSearchClick = onSearchClick,
             )
         }

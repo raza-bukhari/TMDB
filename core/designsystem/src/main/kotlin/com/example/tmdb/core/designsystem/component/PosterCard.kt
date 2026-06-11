@@ -29,6 +29,7 @@ fun PosterCard(
     rating: Double,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
     poster: @Composable () -> Unit,
 ) {
     Card(onClick = onClick, modifier = modifier) {
@@ -51,8 +52,17 @@ fun PosterCard(
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(8.dp),
+                modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 8.dp),
             )
+            subtitle?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 4.dp),
+                )
+            }
         }
     }
 }

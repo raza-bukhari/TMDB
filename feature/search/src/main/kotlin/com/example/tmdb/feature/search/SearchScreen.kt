@@ -152,7 +152,7 @@ private fun ResultsGrid(
     LazyVerticalGrid(
         state = gridState,
         columns = GridCells.Adaptive(minSize = 120.dp),
-        contentPadding = PaddingValues(12.dp),
+        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = modifier.testTag(SearchTestTags.GRID),
@@ -166,6 +166,7 @@ private fun ResultsGrid(
                 title = movie.title,
                 rating = movie.rating,
                 onClick = { onMovieClick(movie.id) },
+                modifier = Modifier.animateItem(),
             ) {
                 AsyncImage(
                     model = movie.posterUrl,
