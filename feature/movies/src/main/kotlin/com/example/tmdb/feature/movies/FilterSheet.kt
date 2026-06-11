@@ -3,11 +3,15 @@ package com.example.tmdb.feature.movies
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.ModalBottomSheet
@@ -21,15 +25,17 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
+import com.example.tmdb.domain.model.MovieGenre
 import kotlin.math.roundToInt
 
 object FilterTestTags {
     const val SHEET = "filter_sheet"
     const val RESET = "filter_reset"
     fun sortChip(sort: MovieSort) = "filter_sort_${sort.name}"
+    fun genreChip(genre: MovieGenre) = "filter_genre_${genre.name}"
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun FilterSheet(
     filters: MovieFilters,
@@ -42,6 +48,7 @@ internal fun FilterSheet(
         Column(
             modifier = Modifier
                 .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
@@ -99,6 +106,23 @@ internal fun FilterSheet(
                     },
                     valueRange = MIN_FILTER_YEAR.toFloat()..MAX_FILTER_YEAR.toFloat(),
                 )
+            }
+
+            Section("Genres") {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    MovieGenre.entries.forEach { genre ->
+                        val selected = genre in filters.genres
+                        FilterChip(
+                            selected = selected,
+                            onClick = {
+                                val next = if (selected) filters.genres - genre else filters.genres + genre
+                                onFiltersChanged(filters.copy(genres = next))
+                            },
+                            label = { Text(genre.displayName) },
+                            modifier = Modifier.testTag(FilterTestTags.genreChip(genre)),
+                        )
+                    }
+                }
             }
         }
     }

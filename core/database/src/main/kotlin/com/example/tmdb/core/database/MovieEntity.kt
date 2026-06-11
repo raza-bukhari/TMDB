@@ -18,6 +18,8 @@ data class MovieEntity(
     val releaseDate: String?,
     val voteAverage: Double,
     val voteCount: Int,
+    /** Comma-joined TMDB genre ids; a converter would be machinery for one read site. */
+    val genreIds: String = "",
 )
 
 object MovieCategories {

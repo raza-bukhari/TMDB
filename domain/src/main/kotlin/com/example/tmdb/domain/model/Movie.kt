@@ -15,4 +15,5 @@ data class Movie(
     val releaseDate: LocalDate?,
     val voteAverage: Double,
     val voteCount: Int,
+    val genreIds: List<Int> = emptyList(),
 )

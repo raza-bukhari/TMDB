@@ -13,6 +13,8 @@ import java.time.LocalDate
 
 private const val GENRE_SEPARATOR = "|"
 
+private const val ID_SEPARATOR = ","
+
 internal fun MovieDto.toEntity(category: String, orderIndex: Int): MovieEntity = MovieEntity(
     id = id,
     category = category,
@@ -24,6 +26,7 @@ internal fun MovieDto.toEntity(category: String, orderIndex: Int): MovieEntity =
     releaseDate = releaseDate,
     voteAverage = voteAverage,
     voteCount = voteCount,
+    genreIds = genreIds.joinToString(ID_SEPARATOR),
 )
 
 internal fun MovieDetailDto.toEntity(): MovieDetailEntity = MovieDetailEntity(
@@ -64,6 +67,7 @@ internal fun MovieDto.toDomain(): Movie = Movie(
     releaseDate = parseDate(releaseDate),
     voteAverage = voteAverage,
     voteCount = voteCount,
+    genreIds = genreIds,
 )
 
 internal fun PagedResponseDto<MovieDto>.toSearchResults(): SearchResults = SearchResults(
@@ -81,6 +85,7 @@ internal fun MovieEntity.toDomain(): Movie = Movie(
     releaseDate = parseDate(releaseDate),
     voteAverage = voteAverage,
     voteCount = voteCount,
+    genreIds = genreIds.split(ID_SEPARATOR).mapNotNull { it.trim().toIntOrNull() },
 )
 
 // TMDB sends "" for unknown dates; anything unparseable degrades to null rather than crashing.

@@ -1,6 +1,7 @@
 package com.example.tmdb.feature.movies
 
 import com.example.tmdb.domain.model.Movie
+import com.example.tmdb.domain.model.MovieGenre
 
 /** How the visible movie list is ordered (applied client-side over the cached list). */
 enum class MovieSort(val label: String) {
@@ -20,12 +21,14 @@ data class MovieFilters(
     val minRating: Float = 0f,
     val fromYear: Int = MIN_FILTER_YEAR,
     val toYear: Int = MAX_FILTER_YEAR,
+    val genres: Set<MovieGenre> = emptySet(),
 ) {
     /** Number of non-default constraints, for the filter badge. */
     val activeCount: Int =
         (if (sort != MovieSort.DEFAULT) 1 else 0) +
             (if (minRating > 0f) 1 else 0) +
-            (if (fromYear > MIN_FILTER_YEAR || toYear < MAX_FILTER_YEAR) 1 else 0)
+            (if (fromYear > MIN_FILTER_YEAR || toYear < MAX_FILTER_YEAR) 1 else 0) +
+            (if (genres.isNotEmpty()) 1 else 0)
 
     val isDefault: Boolean get() = activeCount == 0
 }
@@ -33,11 +36,14 @@ data class MovieFilters(
 /** Filters then sorts [movies]; a movie with no release year is kept only when the year window is full. */
 internal fun List<Movie>.applyFilters(filters: MovieFilters): List<Movie> {
     val yearWindowFull = filters.fromYear <= MIN_FILTER_YEAR && filters.toYear >= MAX_FILTER_YEAR
+    val genreIds = filters.genres.map { it.id }.toSet()
     val filtered = filter { movie ->
         val ratingOk = movie.voteAverage >= filters.minRating
         val year = movie.releaseDate?.year
         val yearOk = if (year == null) yearWindowFull else year in filters.fromYear..filters.toYear
-        ratingOk && yearOk
+        // Match if the movie carries ANY of the selected genres.
+        val genreOk = genreIds.isEmpty() || movie.genreIds.any { it in genreIds }
+        ratingOk && yearOk && genreOk
     }
     return when (filters.sort) {
         MovieSort.DEFAULT -> filtered

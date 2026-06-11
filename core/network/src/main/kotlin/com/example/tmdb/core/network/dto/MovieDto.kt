@@ -13,6 +13,7 @@ data class MovieDto(
     @SerialName("release_date") val releaseDate: String? = null,
     @SerialName("vote_average") val voteAverage: Double = 0.0,
     @SerialName("vote_count") val voteCount: Int = 0,
+    @SerialName("genre_ids") val genreIds: List<Int> = emptyList(),
 )
 
 @Serializable

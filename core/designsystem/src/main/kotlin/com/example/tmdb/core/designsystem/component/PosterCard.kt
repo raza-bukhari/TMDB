@@ -1,7 +1,10 @@
 package com.example.tmdb.core.designsystem.component
 
 import android.content.res.Configuration
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
@@ -12,8 +15,11 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -32,7 +38,16 @@ fun PosterCard(
     subtitle: String? = null,
     poster: @Composable () -> Unit,
 ) {
-    Card(onClick = onClick, modifier = modifier) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    // Subtle scale-down while pressed for tactile feedback.
+    val scale by animateFloatAsState(if (pressed) 0.96f else 1f, label = "card-press")
+
+    Card(
+        onClick = onClick,
+        interactionSource = interactionSource,
+        modifier = modifier.graphicsLayer { scaleX = scale; scaleY = scale },
+    ) {
         Column {
             Box(
                 modifier = Modifier
@@ -65,25 +80,6 @@ fun PosterCard(
             }
         }
     }
-}
-
-@Composable
-fun RatingBadge(
-    rating: Double,
-    modifier: Modifier = Modifier,
-) {
-    Text(
-        // TMDB vote_average is 0..10 with noisy precision; one decimal reads best.
-        text = "★ %.1f".format(rating),
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.onPrimary,
-        modifier = modifier
-            .background(
-                color = MaterialTheme.colorScheme.primary,
-                shape = MaterialTheme.shapes.small,
-            )
-            .padding(horizontal = 6.dp, vertical = 2.dp),
-    )
 }
 
 @Preview(name = "light", showBackground = true)
