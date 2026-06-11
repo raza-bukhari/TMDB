@@ -14,4 +14,13 @@ dependencies {
 
     testImplementation(project(":core:testing"))
     testImplementation(libs.turbine)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.room.runtime)
+    testImplementation(libs.retrofit)
+    testImplementation(libs.retrofit.converter.kotlinx.serialization)
+    testImplementation(platform(libs.okhttp.bom))
+    testImplementation(libs.okhttp)
+    testImplementation(libs.mockwebserver3.junit4)
+    testImplementation(libs.kotlinx.serialization.json)
 }
