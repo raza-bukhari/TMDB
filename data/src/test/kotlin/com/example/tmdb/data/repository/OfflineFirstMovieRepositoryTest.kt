@@ -9,6 +9,7 @@ import com.example.tmdb.core.database.MovieEntity
 import com.example.tmdb.core.database.TmdbDatabase
 import com.example.tmdb.core.network.TmdbApi
 import com.example.tmdb.domain.model.AppError
+import com.example.tmdb.domain.model.MovieCategory
 import com.example.tmdb.domain.model.MovieId
 import com.example.tmdb.domain.model.appErrorOrNull
 import kotlinx.coroutines.CoroutineDispatcher
@@ -81,11 +82,11 @@ class OfflineFirstMovieRepositoryTest {
     fun `given an empty cache, when refreshing, then observers see empty then the fetched page in TMDB order`() = runTest {
         server.enqueue(MockResponse.Builder().code(200).body(fixture("popular_page_1.json")).build())
 
-        repository.observePopularMovies().test {
+        repository.observeMovies(MovieCategory.POPULAR).test {
             assertEquals(emptyList<Nothing>(), awaitItem())
 
-            val refresh = repository.refreshPopularMovies()
-            assertEquals(true, refresh.isSuccess)
+            val refresh = repository.refreshMovies(MovieCategory.POPULAR)
+            assertEquals(500, refresh.getOrThrow().totalPages)
 
             val refreshed = awaitItem()
             assertEquals(listOf(MovieId(550), MovieId(603), MovieId(999999)), refreshed.map { it.id })
@@ -106,11 +107,30 @@ class OfflineFirstMovieRepositoryTest {
         )
         server.enqueue(MockResponse.Builder().code(401).body(fixture("error_401.json")).build())
 
-        val result = repository.refreshPopularMovies()
+        val result = repository.refreshMovies(MovieCategory.POPULAR)
 
         assertEquals(AppError.InvalidToken, result.appErrorOrNull())
-        repository.observePopularMovies().test {
+        repository.observeMovies(MovieCategory.POPULAR).test {
             assertEquals(listOf(MovieId(1)), awaitItem().map { it.id })
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `given a refreshed first page, when loading more, then page 2 appends after page 1 in order`() = runTest {
+        server.enqueue(MockResponse.Builder().code(200).body(fixture("popular_page_1.json")).build())
+        server.enqueue(MockResponse.Builder().code(200).body(fixture("top_rated_page_2.json")).build())
+
+        repository.refreshMovies(MovieCategory.POPULAR).getOrThrow()
+        val more = repository.loadMoreMovies(MovieCategory.POPULAR, page = 2).getOrThrow()
+
+        assertEquals(2, more.page)
+        repository.observeMovies(MovieCategory.POPULAR).test {
+            // page 1 ids (orderIndex 0..2) then the page-2 id (orderIndex 20) — appended, not interleaved.
+            assertEquals(
+                listOf(MovieId(550), MovieId(603), MovieId(999999), MovieId(157336)),
+                awaitItem().map { it.id },
+            )
             cancelAndIgnoreRemainingEvents()
         }
     }

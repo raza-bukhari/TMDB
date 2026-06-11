@@ -23,6 +23,8 @@ sealed interface AppError {
 /** Carrier so typed errors can travel inside [kotlin.Result] failures. */
 class AppException(val error: AppError) : Exception(error.toString())
 
+/** The typed error carried by a [Throwable], or [AppError.Unknown] for foreign exceptions. */
+fun Throwable.asAppError(): AppError = (this as? AppException)?.error ?: AppError.Unknown(this)
+
 /** The [AppError] inside a failed [Result], or [AppError.Unknown] for foreign exceptions. */
-fun Result<*>.appErrorOrNull(): AppError? =
-    exceptionOrNull()?.let { (it as? AppException)?.error ?: AppError.Unknown(it) }
+fun Result<*>.appErrorOrNull(): AppError? = exceptionOrNull()?.asAppError()

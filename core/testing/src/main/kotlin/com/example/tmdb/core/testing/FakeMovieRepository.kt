@@ -1,8 +1,10 @@
 package com.example.tmdb.core.testing
 
 import com.example.tmdb.domain.model.Movie
+import com.example.tmdb.domain.model.MovieCategory
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
+import com.example.tmdb.domain.model.MoviePage
 import com.example.tmdb.domain.model.SearchResults
 import com.example.tmdb.domain.repository.MovieRepository
 import kotlinx.coroutines.flow.Flow
@@ -10,29 +12,35 @@ import kotlinx.coroutines.flow.MutableStateFlow
 
 class FakeMovieRepository : MovieRepository {
 
-    val moviesFlow = MutableStateFlow<List<Movie>>(emptyList())
-    val detailFlow = MutableStateFlow<MovieDetail?>(null)
-    var refreshResult: Result<Unit> = Result.success(Unit)
-    var refreshCalls: Int = 0
-        private set
-    var lastDetailId: MovieId? = null
-        private set
+    // --- category lists ---
 
-    /** When set, refresh applies it to the cache before returning, like a real fetch. */
-    var onRefreshCachePopulation: (() -> List<Movie>)? = null
+    private val categoryFlows = mutableMapOf<MovieCategory, MutableStateFlow<List<Movie>>>()
 
-    /** When set, detail refresh populates the detail cache on success. */
-    var onDetailRefreshCachePopulation: (() -> MovieDetail)? = null
+    /** Backing cache flow for [category], created on first access. Tests mutate `.value` to seed the cache. */
+    fun moviesFlow(category: MovieCategory): MutableStateFlow<List<Movie>> =
+        categoryFlows.getOrPut(category) { MutableStateFlow(emptyList()) }
 
-    override fun observePopularMovies(): Flow<List<Movie>> = moviesFlow
+    val refreshedCategories = mutableListOf<MovieCategory>()
+    val loadMoreCalls = mutableListOf<Pair<MovieCategory, Int>>()
 
-    override suspend fun refreshPopularMovies(): Result<Unit> {
-        refreshCalls++
-        if (refreshResult.isSuccess) {
-            onRefreshCachePopulation?.let { moviesFlow.value = it() }
-        }
-        return refreshResult
+    /** Programmable refresh; may also seed [moviesFlow] to mimic a real fetch. */
+    var onRefresh: (MovieCategory) -> Result<MoviePage> = { Result.success(MoviePage(page = 1, totalPages = 1)) }
+    var onLoadMore: (MovieCategory, Int) -> Result<MoviePage> =
+        { _, page -> Result.success(MoviePage(page = page, totalPages = page)) }
+
+    override fun observeMovies(category: MovieCategory): Flow<List<Movie>> = moviesFlow(category)
+
+    override suspend fun refreshMovies(category: MovieCategory): Result<MoviePage> {
+        refreshedCategories += category
+        return onRefresh(category)
     }
+
+    override suspend fun loadMoreMovies(category: MovieCategory, page: Int): Result<MoviePage> {
+        loadMoreCalls += category to page
+        return onLoadMore(category, page)
+    }
+
+    // --- search ---
 
     /** Queue of (query, page) pairs received by [searchMovies], oldest first. */
     val searchCalls = mutableListOf<Pair<String, Int>>()
@@ -47,6 +55,16 @@ class FakeMovieRepository : MovieRepository {
         return onSearch(query, page)
     }
 
+    // --- detail ---
+
+    val detailFlow = MutableStateFlow<MovieDetail?>(null)
+    var refreshResult: Result<Unit> = Result.success(Unit)
+    var lastDetailId: MovieId? = null
+        private set
+
+    /** When set, detail refresh populates the detail cache on success. */
+    var onDetailRefreshCachePopulation: (() -> MovieDetail)? = null
+
     override fun observeMovieDetail(id: MovieId): Flow<MovieDetail?> {
         lastDetailId = id
         return detailFlow
@@ -54,7 +72,6 @@ class FakeMovieRepository : MovieRepository {
 
     override suspend fun refreshMovieDetail(id: MovieId): Result<Unit> {
         lastDetailId = id
-        refreshCalls++
         if (refreshResult.isSuccess) {
             onDetailRefreshCachePopulation?.let { detailFlow.value = it() }
         }

@@ -1,0 +1,24 @@
+{
+  "dates": { "maximum": "2026-06-11", "minimum": "2026-04-30" },
+  "page": 2,
+  "results": [
+    {
+      "adult": false,
+      "backdrop_path": "/np.jpg",
+      "genre_ids": [28],
+      "id": 1011985,
+      "original_language": "en",
+      "original_title": "Kung Fu Panda 4",
+      "overview": "Po is gearing up to become the spiritual leader of his Valley of Peace.",
+      "popularity": 1234.5,
+      "poster_path": "/kungfu.jpg",
+      "release_date": "2026-03-02",
+      "title": "Kung Fu Panda 4",
+      "video": false,
+      "vote_average": 7.1,
+      "vote_count": 1200
+    }
+  ],
+  "total_pages": 42,
+  "total_results": 840
+}

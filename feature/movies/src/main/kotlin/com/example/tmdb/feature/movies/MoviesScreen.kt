@@ -10,17 +10,24 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -34,14 +41,20 @@ import com.example.tmdb.core.designsystem.component.LoadingState
 import com.example.tmdb.core.designsystem.component.PosterCard
 import com.example.tmdb.core.designsystem.theme.TMDBTheme
 import com.example.tmdb.domain.model.AppError
+import com.example.tmdb.domain.model.MovieCategory
 import kotlinx.collections.immutable.persistentListOf
 import org.koin.androidx.compose.koinViewModel
 
 object MoviesTestTags {
     const val GRID = "movies_grid"
     const val SEARCH = "movies_search_button"
+    const val APPEND_SPINNER = "movies_append_spinner"
     fun movieCard(id: Long) = "movie_card_$id"
+    fun tab(category: MovieCategory) = "movies_tab_${category.name}"
 }
+
+/** Request the next page this many items before the end of the grid. */
+private const val LOAD_MORE_LOOKAHEAD = 6
 
 @Composable
 fun MoviesScreen(
@@ -62,8 +75,10 @@ fun MoviesScreen(
 
     MoviesScreenContent(
         state = state,
+        onCategorySelected = viewModel::onCategorySelected,
         onRetryClick = viewModel::onRetryClicked,
         onMovieClick = viewModel::onMovieClicked,
+        onLoadMoreRequested = viewModel::onLoadMoreRequested,
         onSearchClick = onSearchClick,
         modifier = modifier,
     )
@@ -72,8 +87,10 @@ fun MoviesScreen(
 @Composable
 internal fun MoviesScreenContent(
     state: MoviesUiState,
+    onCategorySelected: (MovieCategory) -> Unit,
     onRetryClick: () -> Unit,
     onMovieClick: (Long) -> Unit,
+    onLoadMoreRequested: () -> Unit,
     onSearchClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -89,7 +106,7 @@ internal fun MoviesScreenContent(
                 .padding(start = 16.dp, end = 4.dp),
         ) {
             Text(
-                text = "Popular Movies",
+                text = "TMDB",
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.weight(1f),
             )
@@ -100,49 +117,110 @@ internal fun MoviesScreenContent(
                 Icon(Icons.Filled.Search, contentDescription = "Search movies")
             }
         }
-        MoviesBody(state = state, onRetryClick = onRetryClick, onMovieClick = onMovieClick)
+
+        ScrollableTabRow(
+            selectedTabIndex = state.selectedCategory.ordinal,
+            edgePadding = 12.dp,
+        ) {
+            MovieCategory.entries.forEach { category ->
+                Tab(
+                    selected = category == state.selectedCategory,
+                    onClick = { onCategorySelected(category) },
+                    text = { Text(category.label()) },
+                    modifier = Modifier.testTag(MoviesTestTags.tab(category)),
+                )
+            }
+        }
+
+        MoviesBody(
+            content = state.content,
+            onRetryClick = onRetryClick,
+            onMovieClick = onMovieClick,
+            onLoadMoreRequested = onLoadMoreRequested,
+        )
     }
 }
 
 @Composable
 private fun MoviesBody(
-    state: MoviesUiState,
+    content: MoviesContent,
     onRetryClick: () -> Unit,
     onMovieClick: (Long) -> Unit,
+    onLoadMoreRequested: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.fillMaxSize()) {
-        when (val content = state.content) {
+        when (content) {
             MoviesContent.Loading -> LoadingState()
             MoviesContent.Empty -> EmptyState(message = "No movies right now. Check back later.")
             is MoviesContent.Error -> ErrorState(
                 message = content.error.toUserMessage(),
                 onRetryClick = onRetryClick,
             )
-            is MoviesContent.Movies -> LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 120.dp),
-                contentPadding = PaddingValues(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.testTag(MoviesTestTags.GRID),
+            is MoviesContent.Movies -> MoviesGrid(
+                content = content,
+                onMovieClick = onMovieClick,
+                onLoadMoreRequested = onLoadMoreRequested,
+            )
+        }
+    }
+}
+
+@Composable
+private fun MoviesGrid(
+    content: MoviesContent.Movies,
+    onMovieClick: (Long) -> Unit,
+    onLoadMoreRequested: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val gridState = rememberLazyGridState()
+    val nearEnd by remember(gridState) {
+        derivedStateOf {
+            val info = gridState.layoutInfo
+            val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: 0
+            lastVisible >= info.totalItemsCount - LOAD_MORE_LOOKAHEAD
+        }
+    }
+    LaunchedEffect(nearEnd, content.canLoadMore, content.isAppending) {
+        if (nearEnd && content.canLoadMore && !content.isAppending) onLoadMoreRequested()
+    }
+
+    LazyVerticalGrid(
+        state = gridState,
+        columns = GridCells.Adaptive(minSize = 120.dp),
+        contentPadding = PaddingValues(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = modifier.testTag(MoviesTestTags.GRID),
+    ) {
+        items(
+            items = content.movies,
+            key = { it.id },
+            contentType = { "movie" },
+        ) { movie ->
+            PosterCard(
+                title = movie.title,
+                rating = movie.rating,
+                onClick = { onMovieClick(movie.id) },
+                modifier = Modifier.testTag(MoviesTestTags.movieCard(movie.id)),
             ) {
-                items(
-                    items = content.movies,
-                    key = { it.id },
-                    contentType = { "movie" },
-                ) { movie ->
-                    PosterCard(
-                        title = movie.title,
-                        rating = movie.rating,
-                        onClick = { onMovieClick(movie.id) },
-                        modifier = Modifier.testTag(MoviesTestTags.movieCard(movie.id)),
-                    ) {
-                        AsyncImage(
-                            model = movie.posterUrl,
-                            contentDescription = movie.title,
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    }
+                AsyncImage(
+                    model = movie.posterUrl,
+                    contentDescription = movie.title,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+        if (content.isAppending) {
+            item(span = { GridItemSpan(maxLineSpan) }, contentType = "spinner") {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .testTag(MoviesTestTags.APPEND_SPINNER),
+                ) {
+                    CircularProgressIndicator()
                 }
             }
         }
@@ -163,15 +241,20 @@ private fun MoviesScreenContentPreview() {
     TMDBTheme {
         MoviesScreenContent(
             state = MoviesUiState(
+                selectedCategory = MovieCategory.TOP_RATED,
                 content = MoviesContent.Movies(
                     persistentListOf(
                         MovieListItem(1, "Fight Club", null, 8.4),
                         MovieListItem(2, "The Matrix", null, 8.2),
                     ),
+                    isAppending = true,
+                    canLoadMore = true,
                 ),
             ),
+            onCategorySelected = {},
             onRetryClick = {},
             onMovieClick = {},
+            onLoadMoreRequested = {},
             onSearchClick = {},
         )
     }
@@ -183,8 +266,10 @@ private fun MoviesScreenErrorPreview() {
     TMDBTheme {
         MoviesScreenContent(
             state = MoviesUiState(content = MoviesContent.Error(AppError.Offline)),
+            onCategorySelected = {},
             onRetryClick = {},
             onMovieClick = {},
+            onLoadMoreRequested = {},
             onSearchClick = {},
         )
     }

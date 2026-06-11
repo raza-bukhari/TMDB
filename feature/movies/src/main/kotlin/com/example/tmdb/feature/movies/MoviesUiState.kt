@@ -3,9 +3,11 @@ package com.example.tmdb.feature.movies
 import androidx.compose.runtime.Immutable
 import com.example.tmdb.domain.model.AppError
 import com.example.tmdb.domain.model.Movie
+import com.example.tmdb.domain.model.MovieCategory
 import kotlinx.collections.immutable.ImmutableList
 
 data class MoviesUiState(
+    val selectedCategory: MovieCategory = MovieCategory.POPULAR,
     val isRefreshing: Boolean = false,
     val content: MoviesContent = MoviesContent.Loading,
 )
@@ -18,7 +20,11 @@ sealed interface MoviesContent {
     data object Loading : MoviesContent
     data object Empty : MoviesContent
     data class Error(val error: AppError) : MoviesContent
-    data class Movies(val movies: ImmutableList<MovieListItem>) : MoviesContent
+    data class Movies(
+        val movies: ImmutableList<MovieListItem>,
+        val isAppending: Boolean = false,
+        val canLoadMore: Boolean = false,
+    ) : MoviesContent
 }
 
 /** UI projection of [Movie]; poster path already resolved to a loadable URL. */
@@ -38,3 +44,10 @@ internal fun Movie.toListItem(): MovieListItem = MovieListItem(
     posterUrl = posterPath?.let { POSTER_BASE + it },
     rating = voteAverage,
 )
+
+/** Tab label for a category. */
+internal fun MovieCategory.label(): String = when (this) {
+    MovieCategory.POPULAR -> "Popular"
+    MovieCategory.TOP_RATED -> "Top Rated"
+    MovieCategory.NOW_PLAYING -> "Now Playing"
+}

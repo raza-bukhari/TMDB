@@ -14,6 +14,16 @@ interface TmdbApi {
         @Query("page") page: Int = 1,
     ): PagedResponseDto<MovieDto>
 
+    @GET("movie/top_rated")
+    suspend fun topRatedMovies(
+        @Query("page") page: Int = 1,
+    ): PagedResponseDto<MovieDto>
+
+    @GET("movie/now_playing")
+    suspend fun nowPlayingMovies(
+        @Query("page") page: Int = 1,
+    ): PagedResponseDto<MovieDto>
+
     @GET("movie/{movie_id}")
     suspend fun movieDetail(
         @Path("movie_id") movieId: Long,

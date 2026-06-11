@@ -22,4 +22,6 @@ data class MovieEntity(
 
 object MovieCategories {
     const val POPULAR = "popular"
+    const val TOP_RATED = "top_rated"
+    const val NOW_PLAYING = "now_playing"
 }
