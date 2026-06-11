@@ -28,7 +28,9 @@ dependencies {
     implementation(platform(libs.okhttp.bom))
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
-    debugImplementation(libs.okhttp.logging)
+    // implementation (not debugImplementation): referenced from main source behind a
+    // BuildConfig.DEBUG guard so release compiles; logging never runs in release.
+    implementation(libs.okhttp.logging)
 
     testImplementation(libs.mockwebserver3.junit4)
     testImplementation(libs.kotlinx.serialization.json)

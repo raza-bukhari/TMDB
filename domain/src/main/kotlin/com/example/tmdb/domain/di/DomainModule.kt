@@ -1,7 +1,11 @@
 package com.example.tmdb.domain.di
 
+import com.example.tmdb.domain.usecase.ObservePopularMoviesUseCase
+import com.example.tmdb.domain.usecase.RefreshPopularMoviesUseCase
+import org.koin.core.module.dsl.factoryOf
 import org.koin.dsl.module
 
 val domainModule = module {
-    // Use cases registered as factories in Milestone 1.
+    factoryOf(::ObservePopularMoviesUseCase)
+    factoryOf(::RefreshPopularMoviesUseCase)
 }
