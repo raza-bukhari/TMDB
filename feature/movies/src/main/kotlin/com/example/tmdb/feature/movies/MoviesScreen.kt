@@ -17,12 +17,15 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -49,6 +52,7 @@ object MoviesTestTags {
     const val GRID = "movies_grid"
     const val SEARCH = "movies_search_button"
     const val APPEND_SPINNER = "movies_append_spinner"
+    const val STALE_BANNER = "movies_stale_banner"
     fun movieCard(id: Long) = "movie_card_$id"
     fun tab(category: MovieCategory) = "movies_tab_${category.name}"
 }
@@ -77,6 +81,7 @@ fun MoviesScreen(
         state = state,
         onCategorySelected = viewModel::onCategorySelected,
         onRetryClick = viewModel::onRetryClicked,
+        onRefresh = viewModel::onRefresh,
         onMovieClick = viewModel::onMovieClicked,
         onLoadMoreRequested = viewModel::onLoadMoreRequested,
         onSearchClick = onSearchClick,
@@ -89,6 +94,7 @@ internal fun MoviesScreenContent(
     state: MoviesUiState,
     onCategorySelected: (MovieCategory) -> Unit,
     onRetryClick: () -> Unit,
+    onRefresh: () -> Unit,
     onMovieClick: (Long) -> Unit,
     onLoadMoreRequested: () -> Unit,
     onSearchClick: () -> Unit,
@@ -134,35 +140,66 @@ internal fun MoviesScreenContent(
 
         MoviesBody(
             content = state.content,
+            isRefreshing = state.isRefreshing,
             onRetryClick = onRetryClick,
+            onRefresh = onRefresh,
             onMovieClick = onMovieClick,
             onLoadMoreRequested = onLoadMoreRequested,
         )
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MoviesBody(
     content: MoviesContent,
+    isRefreshing: Boolean,
     onRetryClick: () -> Unit,
+    onRefresh: () -> Unit,
     onMovieClick: (Long) -> Unit,
     onLoadMoreRequested: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier = modifier.fillMaxSize()) {
-        when (content) {
-            MoviesContent.Loading -> LoadingState()
-            MoviesContent.Empty -> EmptyState(message = "No movies right now. Check back later.")
-            is MoviesContent.Error -> ErrorState(
-                message = content.error.toUserMessage(),
-                onRetryClick = onRetryClick,
-            )
-            is MoviesContent.Movies -> MoviesGrid(
-                content = content,
-                onMovieClick = onMovieClick,
-                onLoadMoreRequested = onLoadMoreRequested,
-            )
+    when (content) {
+        // Pull-to-refresh only wraps the scrollable grid; other states drive refresh via retry.
+        is MoviesContent.Movies -> PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            modifier = modifier.fillMaxSize(),
+        ) {
+            Column(Modifier.fillMaxSize()) {
+                content.staleError?.let { StaleBanner(it) }
+                MoviesGrid(
+                    content = content,
+                    onMovieClick = onMovieClick,
+                    onLoadMoreRequested = onLoadMoreRequested,
+                )
+            }
         }
+        MoviesContent.Loading -> Box(modifier.fillMaxSize()) { LoadingState() }
+        MoviesContent.Empty -> Box(modifier.fillMaxSize()) {
+            EmptyState(message = "No movies right now. Check back later.")
+        }
+        is MoviesContent.Error -> Box(modifier.fillMaxSize()) {
+            ErrorState(message = content.error.toUserMessage(), onRetryClick = onRetryClick)
+        }
+    }
+}
+
+@Composable
+private fun StaleBanner(error: AppError, modifier: Modifier = Modifier) {
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag(MoviesTestTags.STALE_BANNER),
+    ) {
+        Text(
+            text = "${error.toUserMessage()} Showing saved movies.",
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
     }
 }
 
@@ -253,6 +290,7 @@ private fun MoviesScreenContentPreview() {
             ),
             onCategorySelected = {},
             onRetryClick = {},
+            onRefresh = {},
             onMovieClick = {},
             onLoadMoreRequested = {},
             onSearchClick = {},
@@ -268,6 +306,7 @@ private fun MoviesScreenErrorPreview() {
             state = MoviesUiState(content = MoviesContent.Error(AppError.Offline)),
             onCategorySelected = {},
             onRetryClick = {},
+            onRefresh = {},
             onMovieClick = {},
             onLoadMoreRequested = {},
             onSearchClick = {},

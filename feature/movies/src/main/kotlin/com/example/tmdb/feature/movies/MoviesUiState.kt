@@ -24,6 +24,8 @@ sealed interface MoviesContent {
         val movies: ImmutableList<MovieListItem>,
         val isAppending: Boolean = false,
         val canLoadMore: Boolean = false,
+        /** Non-null when the last refresh failed but cached movies are still shown. */
+        val staleError: AppError? = null,
     ) : MoviesContent
 }
 

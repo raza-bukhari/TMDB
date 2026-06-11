@@ -30,6 +30,7 @@ class MoviesScreenTest {
         state: MoviesUiState,
         onCategorySelected: (MovieCategory) -> Unit = {},
         onRetryClick: () -> Unit = {},
+        onRefresh: () -> Unit = {},
         onMovieClick: (Long) -> Unit = {},
         onLoadMoreRequested: () -> Unit = {},
         onSearchClick: () -> Unit = {},
@@ -39,6 +40,7 @@ class MoviesScreenTest {
                 state = state,
                 onCategorySelected = onCategorySelected,
                 onRetryClick = onRetryClick,
+                onRefresh = onRefresh,
                 onMovieClick = onMovieClick,
                 onLoadMoreRequested = onLoadMoreRequested,
                 onSearchClick = onSearchClick,
@@ -88,6 +90,17 @@ class MoviesScreenTest {
         }
 
         composeRule.onNodeWithTag(MoviesTestTags.APPEND_SPINNER).assertIsDisplayed()
+    }
+
+    @Test
+    fun givenStaleCache_whenRefreshFailed_thenBannerAndMoviesBothShow() {
+        composeRule.setContent {
+            Screen(MoviesUiState(content = MoviesContent.Movies(movies, staleError = AppError.Offline)))
+        }
+
+        composeRule.onNodeWithTag(MoviesTestTags.STALE_BANNER).assertIsDisplayed()
+        // Cache still wins — movies remain visible alongside the banner.
+        composeRule.onNodeWithText("Fight Club").assertIsDisplayed()
     }
 
     @Test

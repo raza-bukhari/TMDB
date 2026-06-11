@@ -60,6 +60,8 @@ internal class MoviesViewModel(
                         movies = movies.map { it.toListItem() }.toImmutableList(),
                         isAppending = st.isAppending,
                         canLoadMore = st.canLoadMore,
+                        // Cache wins, but flag a failed refresh so the UI can warn non-blockingly.
+                        staleError = st.error,
                     )
                     st.isRefreshing -> MoviesContent.Loading
                     st.error != null -> MoviesContent.Error(st.error)
@@ -88,6 +90,9 @@ internal class MoviesViewModel(
     }
 
     fun onRetryClicked() = refresh(selectedCategory.value)
+
+    /** Pull-to-refresh on the current tab. */
+    fun onRefresh() = refresh(selectedCategory.value)
 
     fun onLoadMoreRequested() {
         val category = selectedCategory.value

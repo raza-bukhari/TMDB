@@ -84,7 +84,10 @@ class MoviesViewModelTest {
 
         viewModel.uiState.test {
             val state = expectMostRecentItemAfter { it.content is MoviesContent.Movies && !it.isRefreshing }
-            assertEquals("Cached", (state.content as MoviesContent.Movies).movies.first().title)
+            val movies = state.content as MoviesContent.Movies
+            assertEquals("Cached", movies.movies.first().title)
+            // Non-blocking signal that the refresh behind the cache failed.
+            assertEquals(AppError.RateLimited, movies.staleError)
         }
     }
 
