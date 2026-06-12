@@ -6,10 +6,12 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import com.example.tmdb.core.designsystem.component.StateTestTags
 import com.example.tmdb.core.designsystem.theme.TMDBTheme
-import com.example.tmdb.domain.model.AppError
-import com.example.tmdb.domain.model.MovieCategory
+import com.example.tmdb.core.designsystem.theme.ThemeMode
+import com.example.tmdb.domain.model.HomeList
+import com.example.tmdb.domain.model.MediaType
 import kotlinx.collections.immutable.persistentListOf
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -20,56 +22,93 @@ class MoviesScreenTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    private val movies = persistentListOf(
-        MovieListItem(550, "Fight Club", null, 8.4, "1999"),
-        MovieListItem(603, "The Matrix", null, 8.2, "1999"),
-    )
+    private val fightClub = movie(550, "Fight Club")
+    private val matrix = movie(603, "The Matrix")
+    private val movies = persistentListOf(fightClub, matrix)
 
     @Composable
     private fun Screen(
         state: MoviesUiState,
-        onCategorySelected: (MovieCategory) -> Unit = {},
+        onTrendingWindowSelected: (TrendingWindow) -> Unit = {},
         onRetryClick: () -> Unit = {},
         onRefresh: () -> Unit = {},
-        onMovieClick: (Long) -> Unit = {},
-        onLoadMoreRequested: () -> Unit = {},
-        onFiltersChanged: (MovieFilters) -> Unit = {},
-        onFiltersReset: () -> Unit = {},
-        onSearchClick: () -> Unit = {},
+        onMovieClick: (Long, MediaType) -> Unit = { _, _ -> },
+        onSearchQueryChanged: (String) -> Unit = {},
+        onTabSelected: (MoviesTab) -> Unit = {},
+        onWatchlistToggle: (MovieListItem) -> Unit = {},
     ) {
-        TMDBTheme(themeMode = com.example.tmdb.core.designsystem.theme.ThemeMode.SYSTEM) {
+        TMDBTheme(themeMode = ThemeMode.SYSTEM) {
             MoviesScreenContent(
                 state = state,
-                themeMode = com.example.tmdb.core.designsystem.theme.ThemeMode.SYSTEM,
+                themeMode = ThemeMode.SYSTEM,
                 onToggleTheme = {},
-                onCategorySelected = onCategorySelected,
+                searchResults = null,
+                discoverResults = null,
+                onSearchQueryChanged = onSearchQueryChanged,
+                onDiscoverQueryChanged = {},
+                onDiscoverFiltersChanged = {},
+                onDiscoverFiltersReset = {},
+                onTabSelected = onTabSelected,
+                onWatchlistToggle = onWatchlistToggle,
+                onTrendingWindowSelected = onTrendingWindowSelected,
                 onRetryClick = onRetryClick,
                 onRefresh = onRefresh,
                 onMovieClick = onMovieClick,
-                onLoadMoreRequested = onLoadMoreRequested,
-                onFiltersChanged = onFiltersChanged,
-                onFiltersReset = onFiltersReset,
-                onSearchClick = onSearchClick,
             )
         }
     }
 
     @Test
-    fun givenMoviesContent_whenRendered_thenGridAndTitlesAreVisible() {
+    fun givenHomeSections_whenRendered_thenTitlesAreVisible() {
         composeRule.setContent {
-            Screen(MoviesUiState(content = MoviesContent.Movies(movies)))
+            Screen(loadedState())
         }
 
-        composeRule.onNodeWithTag(MoviesTestTags.GRID).assertIsDisplayed()
+        composeRule.onNodeWithTag(MoviesTestTags.HOME).assertIsDisplayed()
         composeRule.onNodeWithText("Fight Club").assertIsDisplayed()
         composeRule.onNodeWithText("The Matrix").assertIsDisplayed()
     }
 
     @Test
-    fun givenMoviesContent_whenCardClicked_thenCallbackReceivesMovieId() {
+    fun givenHomeScreen_whenRendered_thenBottomNavigationIsVisible() {
+        composeRule.setContent {
+            Screen(loadedState())
+        }
+
+        composeRule.onNodeWithTag(MoviesTestTags.BOTTOM_NAV).assertIsDisplayed()
+        composeRule.onNodeWithText("Home").assertIsDisplayed()
+        composeRule.onNodeWithText("Discover").assertIsDisplayed()
+        composeRule.onNodeWithText("Watchlist").assertIsDisplayed()
+        composeRule.onNodeWithText("Profile").assertIsDisplayed()
+    }
+
+    @Test
+    fun givenDiscoverTabClicked_whenRendered_thenCallbackReceivesDiscoverTab() {
+        var selected: MoviesTab? = null
+        composeRule.setContent {
+            Screen(loadedState(), onTabSelected = { selected = it })
+        }
+
+        composeRule.onNodeWithText("Discover").performClick()
+
+        assertEquals(MoviesTab.DISCOVER, selected)
+    }
+
+    @Test
+    fun givenDiscoverTabSelected_whenRendered_thenDiscoverContentIsVisible() {
+        composeRule.setContent {
+            Screen(loadedState(selectedTab = MoviesTab.DISCOVER))
+        }
+
+        composeRule.onNodeWithTag(MoviesTestTags.DISCOVER).assertIsDisplayed()
+        composeRule.onNodeWithText("Discover").assertIsDisplayed()
+    }
+
+    @Test
+    fun givenHomeMovie_whenCardClicked_thenCallbackReceivesMovieId() {
         var clicked: Long? = null
         composeRule.setContent {
-            Screen(MoviesUiState(content = MoviesContent.Movies(movies)), onMovieClick = { clicked = it })
+            Screen(loadedState(), onMovieClick = { id, _ -> clicked = id })
         }
 
         composeRule.onNodeWithTag(MoviesTestTags.movieCard(550)).performClick()
@@ -78,54 +117,61 @@ class MoviesScreenTest {
     }
 
     @Test
-    fun givenTabs_whenTopRatedSelected_thenCallbackReceivesCategory() {
-        var selected: MovieCategory? = null
+    fun givenWatchlistTabSelected_whenSavedMoviesExist_thenSavedMovieIsVisible() {
         composeRule.setContent {
-            Screen(MoviesUiState(content = MoviesContent.Movies(movies)), onCategorySelected = { selected = it })
+            Screen(
+                loadedState(
+                    selectedTab = MoviesTab.WATCHLIST,
+                    watchlistMovies = persistentListOf(matrix),
+                ),
+            )
         }
 
-        composeRule.onNodeWithTag(MoviesTestTags.tab(MovieCategory.TOP_RATED)).performClick()
-
-        assertEquals(MovieCategory.TOP_RATED, selected)
+        composeRule.onNodeWithTag(MoviesTestTags.WATCHLIST).assertIsDisplayed()
+        composeRule.onNodeWithText("The Matrix").assertIsDisplayed()
     }
 
     @Test
-    fun givenAppendingMovies_whenRendered_thenAppendSpinnerIsVisible() {
+    fun givenTrendingToggle_whenWeekClicked_thenCallbackReceivesWeeklyWindow() {
+        var selected: TrendingWindow? = null
         composeRule.setContent {
-            Screen(MoviesUiState(content = MoviesContent.Movies(movies, isAppending = true, canLoadMore = true)))
+            Screen(loadedState(), onTrendingWindowSelected = { selected = it })
         }
 
-        composeRule.onNodeWithTag(MoviesTestTags.APPEND_SPINNER).assertIsDisplayed()
+        composeRule.onNodeWithTag(MoviesTestTags.TRENDING_WEEK).performClick()
+
+        assertEquals(TrendingWindow.THIS_WEEK, selected)
     }
 
     @Test
-    fun givenStaleCache_whenRefreshFailed_thenBannerAndMoviesBothShow() {
+    fun givenInlineSearch_whenTyped_thenQueryCallbackFires() {
+        var query = ""
         composeRule.setContent {
-            Screen(MoviesUiState(content = MoviesContent.Movies(movies, staleError = AppError.Offline)))
+            Screen(loadedState(), onSearchQueryChanged = { query = it })
         }
 
-        composeRule.onNodeWithTag(MoviesTestTags.STALE_BANNER).assertIsDisplayed()
-        // Cache still wins — movies remain visible alongside the banner.
-        composeRule.onNodeWithText("Fight Club").assertIsDisplayed()
+        composeRule.onNodeWithTag(MoviesTestTags.SEARCH_FIELD).performTextInput("matrix")
+
+        assertEquals("matrix", query)
     }
 
     @Test
-    fun givenMoviesScreen_whenSearchClicked_thenSearchCallbackFires() {
-        var searched = false
+    fun givenSearchQuery_whenRendered_thenSearchHeaderAppearsInline() {
         composeRule.setContent {
-            Screen(MoviesUiState(content = MoviesContent.Movies(movies)), onSearchClick = { searched = true })
+            Screen(loadedState(searchQuery = "matrix"))
         }
 
-        composeRule.onNodeWithTag(MoviesTestTags.SEARCH).performClick()
-
-        assertEquals(true, searched)
+        composeRule.onNodeWithTag(MoviesTestTags.SEARCH_FIELD).assertIsDisplayed()
     }
 
     @Test
-    fun givenErrorContent_whenRetryClicked_thenRetryCallbackFires() {
+    fun givenErrorWithoutSections_whenRetryClicked_thenRetryCallbackFires() {
         var retried = false
         composeRule.setContent {
-            Screen(MoviesUiState(content = MoviesContent.Error(AppError.Offline)), onRetryClick = { retried = true })
+            Screen(
+                MoviesUiState(isLoading = false, errorMessage = "You're offline. Connect and try again."),
+                onRetryClick = { retried = true },
+            )
         }
 
         composeRule.onNodeWithTag(StateTestTags.ERROR).assertIsDisplayed()
@@ -135,11 +181,42 @@ class MoviesScreenTest {
     }
 
     @Test
-    fun givenLoadingContent_whenRendered_thenSpinnerIsVisible() {
+    fun givenLoadingHome_whenRendered_thenSpinnerIsVisible() {
         composeRule.setContent {
-            Screen(MoviesUiState(content = MoviesContent.Loading))
+            Screen(MoviesUiState(isLoading = true))
         }
 
         composeRule.onNodeWithTag(StateTestTags.LOADING).assertIsDisplayed()
     }
+
+    private fun loadedState(
+        searchQuery: String = "",
+        selectedTab: MoviesTab = MoviesTab.HOME,
+        watchlistMovies: kotlinx.collections.immutable.ImmutableList<MovieListItem> = persistentListOf(),
+    ) = MoviesUiState(
+        selectedTab = selectedTab,
+        searchQuery = searchQuery,
+        isLoading = false,
+        hero = fightClub,
+        sections = persistentListOf(
+            HomeSectionUi(
+                list = HomeList.TRENDING_TODAY,
+                title = "Trending",
+                subtitle = "Movies people are watching today",
+                movies = movies,
+            ),
+        ),
+        watchlistMovies = watchlistMovies,
+    )
+
+    private fun movie(id: Long, title: String) = MovieListItem(
+        id = id,
+        title = title,
+        overview = "Overview for $title",
+        posterUrl = null,
+        backdropUrl = null,
+        rating = 8.4,
+        voteCount = 100,
+        releaseYear = "1999",
+    )
 }

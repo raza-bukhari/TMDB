@@ -62,6 +62,7 @@ data class MovieDetailUi(
     val similarMovies: ImmutableList<MovieSummaryUi>,
     val watchProviders: ImmutableList<WatchProviderUi>,
     val externalRatings: ExternalRatingsUi = ExternalRatingsUi(),
+    val isWatchlisted: Boolean = false,
 )
 
 @Immutable
@@ -78,7 +79,10 @@ private const val BACKDROP_BASE = "https://image.tmdb.org/t/p/w780"
 private const val PROFILE_BASE = "https://image.tmdb.org/t/p/w185"
 private const val LOGO_BASE = "https://image.tmdb.org/t/p/w92"
 
-internal fun MovieDetail.toUi(externalRatings: ExternalRatings = ExternalRatings()): MovieDetailUi = MovieDetailUi(
+internal fun MovieDetail.toUi(
+    externalRatings: ExternalRatings = ExternalRatings(),
+    isWatchlisted: Boolean = false,
+): MovieDetailUi = MovieDetailUi(
     id = id.value,
     title = title,
     tagline = tagline,
@@ -116,6 +120,7 @@ internal fun MovieDetail.toUi(externalRatings: ExternalRatings = ExternalRatings
         )
     }.toImmutableList(),
     externalRatings = externalRatings.toUi(),
+    isWatchlisted = isWatchlisted,
 )
 
 private fun ExternalRatings.toUi(): ExternalRatingsUi = ExternalRatingsUi(

@@ -1,10 +1,12 @@
 package com.example.tmdb.domain.usecase
 
 import com.example.tmdb.domain.model.MovieId
+import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.repository.MovieRepository
 
 class RefreshMovieDetailUseCase(
     private val repository: MovieRepository,
 ) {
-    suspend operator fun invoke(id: MovieId): Result<Unit> = repository.refreshMovieDetail(id)
+    suspend operator fun invoke(id: MovieId, mediaType: MediaType = MediaType.MOVIE): Result<Unit> =
+        repository.refreshMovieDetail(id, mediaType)
 }

@@ -1,8 +1,10 @@
 package com.example.tmdb.domain
 
 import androidx.paging.PagingData
+import com.example.tmdb.domain.model.DiscoverMovieFilters
 import com.example.tmdb.domain.model.ExternalRatings
 import com.example.tmdb.domain.model.HomeList
+import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieCategory
 import com.example.tmdb.domain.model.MovieDetail
@@ -17,6 +19,7 @@ import kotlinx.coroutines.flow.map
 class FakeRepo : MovieRepository {
     val movies = MutableStateFlow<List<Movie>>(emptyList())
     val detail = MutableStateFlow<MovieDetail?>(null)
+    val watchlist = MutableStateFlow<List<Movie>>(emptyList())
 
     var detailResult: Result<Unit> = Result.success(Unit)
     var homeResult: Result<List<Movie>> = Result.success(emptyList())
@@ -39,7 +42,7 @@ class FakeRepo : MovieRepository {
         return detail
     }
 
-    override suspend fun refreshMovieDetail(id: MovieId): Result<Unit> {
+    override suspend fun refreshMovieDetail(id: MovieId, mediaType: MediaType): Result<Unit> {
         lastDetailId = id
         return detailResult
     }
@@ -49,6 +52,9 @@ class FakeRepo : MovieRepository {
         return flowOf(PagingData.from(onSearch(query)))
     }
 
+    override fun discoverMovies(filters: DiscoverMovieFilters): Flow<PagingData<Movie>> =
+        flowOf(PagingData.from(emptyList()))
+
     override suspend fun homeList(list: HomeList): Result<List<Movie>> {
         lastHomeList = list
         return homeResult
@@ -57,5 +63,35 @@ class FakeRepo : MovieRepository {
     override suspend fun externalRatings(imdbId: String): Result<ExternalRatings> {
         lastImdbId = imdbId
         return externalRatingsResult
+    }
+
+    override fun observeWatchlist(): Flow<List<Movie>> = watchlist
+
+    override fun observeWatchlistIds(): Flow<Set<MovieId>> =
+        watchlist.map { movies -> movies.map { it.id }.toSet() }
+
+    override suspend fun addToWatchlist(movie: Movie): Result<Unit> {
+        watchlist.value = (listOf(movie) + watchlist.value.filterNot { it.id == movie.id })
+        return Result.success(Unit)
+    }
+
+    override suspend fun addToWatchlist(detail: MovieDetail): Result<Unit> {
+        return addToWatchlist(
+            Movie(
+                id = detail.id,
+                title = detail.title,
+                overview = detail.overview,
+                posterPath = detail.posterPath,
+                backdropPath = detail.backdropPath,
+                releaseDate = detail.releaseDate,
+                voteAverage = detail.voteAverage,
+                voteCount = detail.voteCount,
+            ),
+        )
+    }
+
+    override suspend fun removeFromWatchlist(id: MovieId): Result<Unit> {
+        watchlist.value = watchlist.value.filterNot { it.id == id }
+        return Result.success(Unit)
     }
 }

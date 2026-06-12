@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
+import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.model.MovieGenre
 import kotlin.math.roundToInt
 
@@ -66,6 +67,21 @@ internal fun FilterSheet(
                     enabled = !filters.isDefault,
                     modifier = Modifier.testTag(FilterTestTags.RESET),
                 ) { Text("Reset") }
+            }
+
+            Section("Content") {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = filters.mediaType == MediaType.MOVIE,
+                        onClick = { onFiltersChanged(filters.copy(mediaType = MediaType.MOVIE)) },
+                        label = { Text("Movies") },
+                    )
+                    FilterChip(
+                        selected = filters.mediaType == MediaType.TV,
+                        onClick = { onFiltersChanged(filters.copy(mediaType = MediaType.TV)) },
+                        label = { Text("Series") },
+                    )
+                }
             }
 
             Section("Sort by") {

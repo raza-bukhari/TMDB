@@ -5,6 +5,11 @@ import java.time.LocalDate
 @JvmInline
 value class MovieId(val value: Long)
 
+enum class MediaType {
+    MOVIE,
+    TV,
+}
+
 data class Movie(
     val id: MovieId,
     val title: String,
@@ -16,4 +21,5 @@ data class Movie(
     val voteAverage: Double,
     val voteCount: Int,
     val genreIds: List<Int> = emptyList(),
+    val mediaType: MediaType = MediaType.MOVIE,
 )

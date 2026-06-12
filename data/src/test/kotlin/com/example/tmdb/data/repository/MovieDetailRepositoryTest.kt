@@ -65,6 +65,7 @@ class MovieDetailRepositoryTest {
             omdbApi = retrofit.create(OmdbApi::class.java),
             dao = db.movieDao(),
             detailDao = db.movieDetailDao(),
+            watchlistDao = db.watchlistDao(),
             dispatchers = TestDispatchers(UnconfinedTestDispatcher()),
         )
     }

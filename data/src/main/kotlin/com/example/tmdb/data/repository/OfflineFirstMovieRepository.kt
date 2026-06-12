@@ -8,14 +8,18 @@ import androidx.paging.map
 import com.example.tmdb.core.common.DispatcherProvider
 import com.example.tmdb.core.database.MovieDao
 import com.example.tmdb.core.database.MovieDetailDao
+import com.example.tmdb.core.database.WatchlistDao
 import com.example.tmdb.core.network.OmdbApi
 import com.example.tmdb.core.network.OmdbConfig
 import com.example.tmdb.core.network.TmdbApi
 import com.example.tmdb.core.network.tmdbCall
 import com.example.tmdb.data.mapper.toDomain
 import com.example.tmdb.data.mapper.toEntity
+import com.example.tmdb.data.mapper.toWatchlistEntity
+import com.example.tmdb.domain.model.DiscoverMovieFilters
 import com.example.tmdb.domain.model.ExternalRatings
 import com.example.tmdb.domain.model.HomeList
+import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieCategory
 import com.example.tmdb.domain.model.MovieDetail
@@ -33,6 +37,7 @@ internal class OfflineFirstMovieRepository(
     private val omdbApi: OmdbApi,
     private val dao: MovieDao,
     private val detailDao: MovieDetailDao,
+    private val watchlistDao: WatchlistDao,
     private val dispatchers: DispatcherProvider,
 ) : MovieRepository {
 
@@ -53,14 +58,26 @@ internal class OfflineFirstMovieRepository(
         ).flow
             .flowOn(dispatchers.default)
 
+    override fun discoverMovies(filters: DiscoverMovieFilters): Flow<PagingData<Movie>> =
+        Pager(
+            config = PagingConfig(pageSize = PAGE_SIZE, enablePlaceholders = false),
+            pagingSourceFactory = { DiscoverPagingSource(api, filters) },
+        ).flow
+            .flowOn(dispatchers.default)
+
     override fun observeMovieDetail(id: MovieId): Flow<MovieDetail?> =
         detailDao.observeById(id.value)
             .map { it?.toDomain() }
             .flowOn(dispatchers.default)
 
-    override suspend fun refreshMovieDetail(id: MovieId): Result<Unit> =
+    override suspend fun refreshMovieDetail(id: MovieId, mediaType: MediaType): Result<Unit> =
         withContext(dispatchers.io) {
-            tmdbCall { api.movieDetail(id.value) }.map { detailDao.upsert(it.toEntity()) }
+            tmdbCall {
+                when (mediaType) {
+                    MediaType.MOVIE -> api.movieDetail(id.value)
+                    MediaType.TV -> api.tvDetail(id.value)
+                }
+            }.map { detailDao.upsert(it.toEntity()) }
         }
 
     override suspend fun homeList(list: HomeList): Result<List<Movie>> =
@@ -75,6 +92,31 @@ internal class OfflineFirstMovieRepository(
                     HomeList.UPCOMING -> api.upcomingMovies()
                 }
             }.map { response -> response.results.map { it.toDomain() } }
+        }
+
+    override fun observeWatchlist(): Flow<List<Movie>> =
+        watchlistDao.observeWatchlist()
+            .map { movies -> movies.map { it.toDomain() } }
+            .flowOn(dispatchers.default)
+
+    override fun observeWatchlistIds(): Flow<Set<MovieId>> =
+        watchlistDao.observeWatchlistIds()
+            .map { ids -> ids.map(::MovieId).toSet() }
+            .flowOn(dispatchers.default)
+
+    override suspend fun addToWatchlist(movie: Movie): Result<Unit> =
+        withContext(dispatchers.io) {
+            runCatching { watchlistDao.upsert(movie.toWatchlistEntity(System.currentTimeMillis())) }
+        }
+
+    override suspend fun addToWatchlist(detail: MovieDetail): Result<Unit> =
+        withContext(dispatchers.io) {
+            runCatching { watchlistDao.upsert(detail.toWatchlistEntity(System.currentTimeMillis())) }
+        }
+
+    override suspend fun removeFromWatchlist(id: MovieId): Result<Unit> =
+        withContext(dispatchers.io) {
+            runCatching { watchlistDao.delete(id.value) }
         }
 
     override suspend fun externalRatings(imdbId: String): Result<ExternalRatings> =

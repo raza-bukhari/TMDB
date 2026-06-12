@@ -1,5 +1,8 @@
 package com.example.tmdb.feature.movies
 
+import com.example.tmdb.domain.model.DiscoverMovieFilters
+import com.example.tmdb.domain.model.DiscoverMovieSort
+import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieGenre
 
@@ -22,13 +25,15 @@ data class MovieFilters(
     val fromYear: Int = MIN_FILTER_YEAR,
     val toYear: Int = MAX_FILTER_YEAR,
     val genres: Set<MovieGenre> = emptySet(),
+    val mediaType: MediaType = MediaType.MOVIE,
 ) {
     /** Number of non-default constraints, for the filter badge. */
     val activeCount: Int =
         (if (sort != MovieSort.DEFAULT) 1 else 0) +
             (if (minRating > 0f) 1 else 0) +
             (if (fromYear > MIN_FILTER_YEAR || toYear < MAX_FILTER_YEAR) 1 else 0) +
-            (if (genres.isNotEmpty()) 1 else 0)
+            (if (genres.isNotEmpty()) 1 else 0) +
+            (if (mediaType != MediaType.MOVIE) 1 else 0)
 
     val isDefault: Boolean get() = activeCount == 0
 }
@@ -65,3 +70,43 @@ internal fun List<Movie>.applyFilters(filters: MovieFilters): List<Movie> {
         MovieSort.TITLE_ASC -> filtered.sortedBy { it.title.lowercase() }
     }
 }
+
+internal fun MovieListItem.matches(query: String, filters: MovieFilters): Boolean {
+    val trimmedQuery = query.trim()
+    val queryOk = trimmedQuery.isBlank() ||
+        title.contains(trimmedQuery, ignoreCase = true) ||
+        overview.contains(trimmedQuery, ignoreCase = true)
+    val yearWindowFull = filters.fromYear <= MIN_FILTER_YEAR && filters.toYear >= MAX_FILTER_YEAR
+    val genreIds = filters.genres.map { it.id }.toSet()
+    val year = releaseYear?.toIntOrNull()
+    val ratingOk = rating >= filters.minRating
+    val yearOk = if (year == null) yearWindowFull else year in filters.fromYear..filters.toYear
+    val genreOk = genreIds.isEmpty() || this.genreIds.any { it in genreIds }
+    return queryOk && ratingOk && yearOk && genreOk
+}
+
+internal fun List<MovieListItem>.applyFilters(query: String, filters: MovieFilters): List<MovieListItem> {
+    val filtered = filter { movie -> movie.matches(query, filters) }
+    return when (filters.sort) {
+        MovieSort.DEFAULT -> filtered
+        MovieSort.RATING_DESC -> filtered.sortedByDescending { it.rating }
+        MovieSort.RELEASE_DESC -> filtered.sortedByDescending { it.releaseYear?.toIntOrNull() }
+        MovieSort.RELEASE_ASC -> filtered.sortedBy { it.releaseYear?.toIntOrNull() ?: Int.MAX_VALUE }
+        MovieSort.TITLE_ASC -> filtered.sortedBy { it.title.lowercase() }
+    }
+}
+
+internal fun MovieFilters.toDiscoverMovieFilters(): DiscoverMovieFilters = DiscoverMovieFilters(
+    sortBy = when (sort) {
+        MovieSort.DEFAULT -> DiscoverMovieSort.POPULARITY_DESC
+        MovieSort.RATING_DESC -> DiscoverMovieSort.RATING_DESC
+        MovieSort.RELEASE_DESC -> DiscoverMovieSort.RELEASE_DESC
+        MovieSort.RELEASE_ASC -> DiscoverMovieSort.RELEASE_ASC
+        MovieSort.TITLE_ASC -> DiscoverMovieSort.TITLE_ASC
+    },
+    minRating = minRating.toDouble(),
+    fromYear = fromYear.takeUnless { it <= MIN_FILTER_YEAR },
+    toYear = toYear.takeUnless { it >= MAX_FILTER_YEAR },
+    genres = genres,
+    mediaType = mediaType,
+)

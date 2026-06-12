@@ -24,10 +24,9 @@ import com.example.tmdb.core.designsystem.theme.TMDBTheme
 import com.example.tmdb.core.designsystem.theme.ThemeMode
 import com.example.tmdb.core.navigation.MovieDetailRoute
 import com.example.tmdb.core.navigation.MoviesRoute
-import com.example.tmdb.core.navigation.SearchRoute
+import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.feature.detail.MovieDetailScreen
 import com.example.tmdb.feature.movies.MoviesScreen
-import com.example.tmdb.feature.search.SearchScreen
 
 private const val NAV_ANIM_MS = 300
 
@@ -58,8 +57,9 @@ class MainActivity : ComponentActivity() {
                 ) {
                     composable<MoviesRoute> {
                         MoviesScreen(
-                            onMovieClick = { movieId -> navController.navigate(MovieDetailRoute(movieId)) },
-                            onSearchClick = { navController.navigate(SearchRoute) },
+                            onMovieClick = { movieId, mediaType ->
+                                navController.navigate(MovieDetailRoute(movieId, mediaType.name))
+                            },
                             themeMode = themeMode,
                             onToggleTheme = { themeMode = themeMode.next() },
                         )
@@ -67,13 +67,7 @@ class MainActivity : ComponentActivity() {
                     composable<MovieDetailRoute> {
                         MovieDetailScreen(
                             onBackClick = { navController.popBackStack() },
-                            onMovieClick = { movieId -> navController.navigate(MovieDetailRoute(movieId)) }
-                        )
-                    }
-                    composable<SearchRoute> {
-                        SearchScreen(
-                            onMovieClick = { movieId -> navController.navigate(MovieDetailRoute(movieId)) },
-                            onBackClick = { navController.popBackStack() },
+                            onMovieClick = { movieId -> navController.navigate(MovieDetailRoute(movieId, MediaType.MOVIE.name)) }
                         )
                     }
                 }

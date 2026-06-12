@@ -37,7 +37,9 @@ class MovieDetailScreenTest {
                 MovieDetailScreenContent(
                     state = MovieDetailUiState(content = MovieDetailContent.Detail(detail)),
                     onBackClick = {},
+                    onMovieClick = {},
                     onRetryClick = {},
+                    onWatchlistToggle = {},
                 )
             }
         }
@@ -56,7 +58,9 @@ class MovieDetailScreenTest {
                 MovieDetailScreenContent(
                     state = MovieDetailUiState(content = MovieDetailContent.Error(AppError.Offline)),
                     onBackClick = {},
+                    onMovieClick = {},
                     onRetryClick = { retried = true },
+                    onWatchlistToggle = {},
                 )
             }
         }
@@ -73,7 +77,9 @@ class MovieDetailScreenTest {
                 MovieDetailScreenContent(
                     state = MovieDetailUiState(content = MovieDetailContent.Loading),
                     onBackClick = { back = true },
+                    onMovieClick = {},
                     onRetryClick = {},
+                    onWatchlistToggle = {},
                 )
             }
         }

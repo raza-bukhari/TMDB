@@ -2,19 +2,35 @@ package com.example.tmdb.feature.movies
 
 import androidx.compose.runtime.Immutable
 import com.example.tmdb.domain.model.HomeList
+import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.model.Movie
+import com.example.tmdb.domain.model.MovieId
+import java.time.LocalDate
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 
 data class MoviesUiState(
+    val selectedTab: MoviesTab = MoviesTab.HOME,
     val trendingWindow: TrendingWindow = TrendingWindow.TODAY,
+    val searchQuery: String = "",
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val errorMessage: String? = null,
     val hero: MovieListItem? = null,
     val sections: ImmutableList<HomeSectionUi> = persistentListOf(),
+    val watchlistMovies: ImmutableList<MovieListItem> = persistentListOf(),
+    val watchlistIds: Set<MovieId> = emptySet(),
+    val discoverQuery: String = "",
+    val discoverFilters: MovieFilters = MovieFilters(),
 )
+
+enum class MoviesTab {
+    HOME,
+    DISCOVER,
+    WATCHLIST,
+    PROFILE,
+}
 
 enum class TrendingWindow {
     TODAY,
@@ -40,6 +56,8 @@ data class MovieListItem(
     val rating: Double,
     val voteCount: Int,
     val releaseYear: String?,
+    val genreIds: List<Int> = emptyList(),
+    val mediaType: MediaType = MediaType.MOVIE,
 )
 
 private const val POSTER_BASE = "https://image.tmdb.org/t/p/w342"
@@ -54,10 +72,25 @@ internal fun Movie.toListItem(): MovieListItem = MovieListItem(
     rating = voteAverage,
     voteCount = voteCount,
     releaseYear = releaseDate?.year?.toString(),
+    genreIds = genreIds,
+    mediaType = mediaType,
 )
 
 internal fun List<Movie>.toMovieListItems(): ImmutableList<MovieListItem> =
     map { it.toListItem() }.toImmutableList()
+
+internal fun MovieListItem.toDomainMovie(): Movie = Movie(
+    id = MovieId(id),
+    title = title,
+    overview = overview,
+    posterPath = posterUrl?.substringAfter(POSTER_BASE, missingDelimiterValue = posterUrl),
+    backdropPath = backdropUrl?.substringAfter(BACKDROP_BASE, missingDelimiterValue = backdropUrl),
+    releaseDate = releaseYear?.toIntOrNull()?.let { LocalDate.of(it, 1, 1) },
+    voteAverage = rating,
+    voteCount = voteCount,
+    genreIds = genreIds,
+    mediaType = mediaType,
+)
 
 internal fun HomeList.title(trendingWindow: TrendingWindow): String = when (this) {
     HomeList.TRENDING_TODAY,

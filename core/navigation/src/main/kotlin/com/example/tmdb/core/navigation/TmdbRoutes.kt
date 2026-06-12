@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
 data object MoviesRoute
 
 @Serializable
-data class MovieDetailRoute(val movieId: Long)
-
-@Serializable
-data object SearchRoute
+data class MovieDetailRoute(
+    val movieId: Long,
+    val mediaType: String = "MOVIE",
+)

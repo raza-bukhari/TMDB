@@ -2,6 +2,7 @@ package com.example.tmdb.core.designsystem.component
 
 import android.content.res.Configuration
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -10,8 +11,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,6 +49,11 @@ fun PosterCard(
     Card(
         onClick = onClick,
         interactionSource = interactionSource,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f)),
         modifier = modifier.graphicsLayer { scaleX = scale; scaleY = scale },
     ) {
         Column {
@@ -55,11 +63,12 @@ fun PosterCard(
                     .aspectRatio(2f / 3f),
             ) {
                 poster()
-                RatingBadge(
+                RatingRing(
                     rating = rating,
+                    diameter = 44.dp,
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp),
+                        .align(Alignment.BottomStart)
+                        .offset(x = 8.dp, y = 20.dp),
                 )
             }
             Text(
@@ -67,7 +76,7 @@ fun PosterCard(
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 8.dp),
+                modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 26.dp),
             )
             subtitle?.let {
                 Text(

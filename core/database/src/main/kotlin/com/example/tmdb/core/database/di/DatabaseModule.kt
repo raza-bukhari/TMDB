@@ -4,6 +4,7 @@ import androidx.room.Room
 import com.example.tmdb.core.database.MovieDao
 import com.example.tmdb.core.database.MovieDetailDao
 import com.example.tmdb.core.database.TmdbDatabase
+import com.example.tmdb.core.database.WatchlistDao
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -16,4 +17,5 @@ val databaseModule = module {
     }
     single<MovieDao> { get<TmdbDatabase>().movieDao() }
     single<MovieDetailDao> { get<TmdbDatabase>().movieDetailDao() }
+    single<WatchlistDao> { get<TmdbDatabase>().watchlistDao() }
 }

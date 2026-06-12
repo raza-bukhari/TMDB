@@ -2,6 +2,7 @@ package com.example.tmdb.data.mapper
 
 import com.example.tmdb.core.database.MovieDetailEntity
 import com.example.tmdb.core.database.MovieEntity
+import com.example.tmdb.core.database.WatchlistMovieEntity
 import com.example.tmdb.core.network.dto.CastMemberDto
 import com.example.tmdb.core.network.dto.CrewMemberDto
 import com.example.tmdb.core.network.dto.MovieDetailDto
@@ -12,6 +13,7 @@ import com.example.tmdb.core.network.dto.WatchProviderDto
 import com.example.tmdb.domain.model.CastMember
 import com.example.tmdb.domain.model.CrewMember
 import com.example.tmdb.domain.model.ExternalRatings
+import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
@@ -34,11 +36,11 @@ internal fun MovieDto.toEntity(category: String, orderIndex: Int): MovieEntity =
     id = id,
     category = category,
     orderIndex = orderIndex,
-    title = title,
+    title = displayTitle,
     overview = overview,
     posterPath = posterPath,
     backdropPath = backdropPath,
-    releaseDate = releaseDate,
+    releaseDate = displayDate,
     voteAverage = voteAverage,
     voteCount = voteCount,
     genreIds = genreIds.joinToString(ID_SEPARATOR),
@@ -46,13 +48,13 @@ internal fun MovieDto.toEntity(category: String, orderIndex: Int): MovieEntity =
 
 internal fun MovieDetailDto.toEntity(): MovieDetailEntity = MovieDetailEntity(
     id = id,
-    title = title,
+    title = displayTitle,
     overview = overview,
     tagline = tagline?.takeIf { it.isNotBlank() },
     posterPath = posterPath,
     backdropPath = backdropPath,
-    releaseDate = releaseDate,
-    runtimeMinutes = runtime,
+    releaseDate = displayDate,
+    runtimeMinutes = runtime ?: episodeRunTime.firstOrNull(),
     voteAverage = voteAverage,
     voteCount = voteCount,
     genres = genres.map { it.name }.filter { it.isNotBlank() }.joinToString(GENRE_SEPARATOR),
@@ -119,14 +121,18 @@ internal fun WatchProviderDto.toDomain(): WatchProvider = WatchProvider(
 // Search results skip Room entirely (D-006), so DTOs map straight to domain.
 internal fun MovieDto.toDomain(): Movie = Movie(
     id = MovieId(id),
-    title = title,
+    title = displayTitle,
     overview = overview,
     posterPath = posterPath,
     backdropPath = backdropPath,
-    releaseDate = parseDate(releaseDate),
+    releaseDate = parseDate(displayDate),
     voteAverage = voteAverage,
     voteCount = voteCount,
     genreIds = genreIds,
+    mediaType = when (mediaType) {
+        "tv" -> MediaType.TV
+        else -> MediaType.MOVIE
+    },
 )
 
 internal fun PagedResponseDto<MovieDto>.toSearchResults(): SearchResults = SearchResults(
@@ -146,6 +152,53 @@ internal fun MovieEntity.toDomain(): Movie = Movie(
     voteCount = voteCount,
     genreIds = genreIds.split(ID_SEPARATOR).mapNotNull { it.trim().toIntOrNull() },
 )
+
+internal fun WatchlistMovieEntity.toDomain(): Movie = Movie(
+    id = MovieId(id),
+    title = title,
+    overview = overview,
+    posterPath = posterPath,
+    backdropPath = backdropPath,
+    releaseDate = parseDate(releaseDate),
+    voteAverage = voteAverage,
+    voteCount = voteCount,
+)
+
+internal fun Movie.toWatchlistEntity(addedAtMillis: Long): WatchlistMovieEntity = WatchlistMovieEntity(
+    id = id.value,
+    title = title,
+    overview = overview,
+    posterPath = posterPath,
+    backdropPath = backdropPath,
+    releaseDate = releaseDate?.toString(),
+    voteAverage = voteAverage,
+    voteCount = voteCount,
+    addedAtMillis = addedAtMillis,
+)
+
+internal fun MovieDetail.toWatchlistEntity(addedAtMillis: Long): WatchlistMovieEntity = WatchlistMovieEntity(
+    id = id.value,
+    title = title,
+    overview = overview,
+    posterPath = posterPath,
+    backdropPath = backdropPath,
+    releaseDate = releaseDate?.toString(),
+    voteAverage = voteAverage,
+    voteCount = voteCount,
+    addedAtMillis = addedAtMillis,
+)
+
+private val MovieDto.displayTitle: String
+    get() = title.ifBlank { name }
+
+private val MovieDto.displayDate: String?
+    get() = releaseDate ?: firstAirDate
+
+private val MovieDetailDto.displayTitle: String
+    get() = title.ifBlank { name }
+
+private val MovieDetailDto.displayDate: String?
+    get() = releaseDate ?: firstAirDate
 
 // TMDB sends "" for unknown dates; anything unparseable degrades to null rather than crashing.
 private fun parseDate(raw: String?): LocalDate? =

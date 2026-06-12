@@ -9,9 +9,12 @@ import com.example.tmdb.domain.model.AppException
 import com.example.tmdb.domain.model.ExternalRatings
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
+import com.example.tmdb.domain.usecase.AddMovieToWatchlistUseCase
 import com.example.tmdb.domain.usecase.GetExternalRatingsUseCase
 import com.example.tmdb.domain.usecase.ObserveMovieDetailUseCase
+import com.example.tmdb.domain.usecase.ObserveWatchlistIdsUseCase
 import com.example.tmdb.domain.usecase.RefreshMovieDetailUseCase
+import com.example.tmdb.domain.usecase.RemoveMovieFromWatchlistUseCase
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -48,6 +51,9 @@ class MovieDetailViewModelTest {
         observeMovieDetail = ObserveMovieDetailUseCase(repository),
         refreshMovieDetail = RefreshMovieDetailUseCase(repository),
         getExternalRatings = GetExternalRatingsUseCase(repository),
+        observeWatchlistIds = ObserveWatchlistIdsUseCase(repository),
+        addMovieToWatchlist = AddMovieToWatchlistUseCase(repository),
+        removeMovieFromWatchlist = RemoveMovieFromWatchlistUseCase(repository),
     )
 
     @Test
@@ -118,6 +124,23 @@ class MovieDetailViewModelTest {
             assertEquals("66/100", ratings.metascore)
         }
         assertEquals(listOf("tt0137523"), repository.externalRatingCalls)
+    }
+
+    @Test
+    fun `given detail is visible, when watchlist toggled, then saved state is reflected`() = runTest {
+        repository.onDetailRefreshCachePopulation = { aDetail }
+        val viewModel = viewModel()
+
+        viewModel.uiState.test {
+            expectMostRecentItemAfter { it.content is MovieDetailContent.Detail }
+
+            viewModel.onWatchlistToggle()
+
+            val saved = expectMostRecentItemAfter {
+                (it.content as? MovieDetailContent.Detail)?.detail?.isWatchlisted == true
+            }
+            assertEquals(true, (saved.content as MovieDetailContent.Detail).detail.isWatchlisted)
+        }
     }
 
     /** Awaits items until [predicate] holds, failing the test on timeout. */

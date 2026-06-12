@@ -65,6 +65,7 @@ class OfflineFirstMovieRepositoryTest {
             omdbApi = retrofit.create(OmdbApi::class.java),
             dao = db.movieDao(),
             detailDao = db.movieDetailDao(),
+            watchlistDao = db.watchlistDao(),
             dispatchers = TestDispatchers(UnconfinedTestDispatcher()),
         )
     }
@@ -94,6 +95,23 @@ class OfflineFirstMovieRepositoryTest {
 
         repository.observeMovieDetail(MovieId(550)).test {
             assertEquals("tt0137523", awaitItem()?.imdbId)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `given a movie is added to watchlist, when observing watchlist, then it is emitted newest first`() = runTest {
+        server.enqueue(MockResponse.Builder().code(200).body(fixture("popular_page_1.json")).build())
+        val movie = repository.homeList(HomeList.POPULAR).getOrThrow().first()
+
+        repository.addToWatchlist(movie).getOrThrow()
+
+        repository.observeWatchlist().test {
+            assertEquals(listOf(MovieId(550)), awaitItem().map { it.id })
+            cancelAndIgnoreRemainingEvents()
+        }
+        repository.observeWatchlistIds().test {
+            assertEquals(setOf(MovieId(550)), awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
     }

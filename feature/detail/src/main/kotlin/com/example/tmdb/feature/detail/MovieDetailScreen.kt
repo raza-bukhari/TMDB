@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -66,6 +67,7 @@ import org.koin.androidx.compose.koinViewModel
 object DetailTestTags {
     const val SCREEN = "detail_screen"
     const val BACK = "detail_back"
+    const val WATCHLIST = "detail_watchlist"
 }
 
 private val HeaderMaxHeight = 300.dp
@@ -85,6 +87,7 @@ fun MovieDetailScreen(
         onBackClick = onBackClick,
         onMovieClick = onMovieClick,
         onRetryClick = viewModel::onRetryClicked,
+        onWatchlistToggle = viewModel::onWatchlistToggle,
         modifier = modifier,
     )
 }
@@ -95,6 +98,7 @@ internal fun MovieDetailScreenContent(
     onBackClick: () -> Unit,
     onMovieClick: (Long) -> Unit,
     onRetryClick: () -> Unit,
+    onWatchlistToggle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(modifier = modifier.fillMaxSize()) {
@@ -105,7 +109,7 @@ internal fun MovieDetailScreenContent(
                     ErrorState(message = content.error.toUserMessage(), onRetryClick = onRetryClick)
                     BackButton(onBackClick, scrim = false)
                 }
-                is MovieDetailContent.Detail -> CollapsingDetail(content.detail, onBackClick, onMovieClick)
+                is MovieDetailContent.Detail -> CollapsingDetail(content.detail, onBackClick, onMovieClick, onWatchlistToggle)
             }
         }
     }
@@ -115,7 +119,8 @@ internal fun MovieDetailScreenContent(
 private fun CollapsingDetail(
     detail: MovieDetailUi,
     onBackClick: () -> Unit,
-    onMovieClick: (Long) -> Unit
+    onMovieClick: (Long) -> Unit,
+    onWatchlistToggle: () -> Unit,
 ) {
     val scroll = rememberScrollState()
     val density = LocalDensity.current
@@ -157,7 +162,7 @@ private fun CollapsingDetail(
                 .verticalScroll(scroll),
         ) {
             Spacer(Modifier.height(HeaderMaxHeight))
-            DetailInfo(detail, onMovieClick, modifier = Modifier.heightIn(min = infoMinHeight))
+            DetailInfo(detail, onMovieClick, onWatchlistToggle, modifier = Modifier.heightIn(min = infoMinHeight))
         }
 
         Box(
@@ -168,6 +173,15 @@ private fun CollapsingDetail(
                 .height(ToolbarHeight),
         ) {
             BackButton(onBackClick, scrim = collapseFraction < 0.5f)
+            DetailWatchlistButton(
+                isWatchlisted = detail.isWatchlisted,
+                onClick = onWatchlistToggle,
+                scrim = collapseFraction < 0.5f,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .statusBarsPadding()
+                    .padding(end = 4.dp),
+            )
             Text(
                 text = detail.title,
                 style = MaterialTheme.typography.titleLarge,
@@ -187,6 +201,7 @@ private fun CollapsingDetail(
 private fun DetailInfo(
     detail: MovieDetailUi,
     onMovieClick: (Long) -> Unit,
+    onWatchlistToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -205,6 +220,11 @@ private fun DetailInfo(
                     text = detail.title,
                     style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.weight(1f),
+                )
+                DetailWatchlistButton(
+                    isWatchlisted = detail.isWatchlisted,
+                    onClick = onWatchlistToggle,
+                    scrim = false,
                 )
             }
             if (detail.externalRatings.hasAny) {
@@ -383,6 +403,27 @@ private fun DetailInfo(
 }
 
 @Composable
+private fun DetailWatchlistButton(
+    isWatchlisted: Boolean,
+    onClick: () -> Unit,
+    scrim: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = modifier
+            .then(if (scrim) Modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.35f)) else Modifier)
+            .testTag(DetailTestTags.WATCHLIST),
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Star,
+            contentDescription = if (isWatchlisted) "Remove from watchlist" else "Add to watchlist",
+            tint = if (isWatchlisted) MaterialTheme.colorScheme.secondary else if (scrim) Color.White else MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+@Composable
 private fun ExternalRatingsRow(ratings: ExternalRatingsUi) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ratings.imdb?.let { RatingChip(label = "IMDb", value = it) }
@@ -489,6 +530,7 @@ private fun MovieDetailPreview() {
             onBackClick = {},
             onMovieClick = {},
             onRetryClick = {},
+            onWatchlistToggle = {},
         )
     }
 }

@@ -15,9 +15,11 @@ internal class SearchPagingSource(
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Movie> {
         val page = params.key ?: 1
         return try {
-            val response = tmdbCall { api.searchMovies(query, page) }.getOrThrow()
+            val response = tmdbCall { api.searchMulti(query, page) }.getOrThrow()
             LoadResult.Page(
-                data = response.results.map { it.toDomain() },
+                data = response.results
+                    .filter { it.mediaType == null || it.mediaType == "movie" || it.mediaType == "tv" }
+                    .map { it.toDomain() },
                 prevKey = if (page == 1) null else page - 1,
                 nextKey = if (response.page >= response.totalPages) null else response.page + 1
             )
