@@ -8,6 +8,7 @@ import com.example.tmdb.core.database.TmdbDatabase
 import com.example.tmdb.core.network.OmdbApi
 import com.example.tmdb.core.network.TmdbApi
 import com.example.tmdb.domain.model.HomeList
+import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.model.UserMediaActivity
 import com.example.tmdb.domain.model.WatchlistStatus
 import com.example.tmdb.domain.model.MovieId
@@ -95,7 +96,7 @@ class OfflineFirstMovieRepositoryTest {
 
         repository.refreshMovieDetail(MovieId(550)).getOrThrow()
 
-        repository.observeMovieDetail(MovieId(550)).test {
+        repository.observeMovieDetail(MovieId(550), MediaType.MOVIE).test {
             assertEquals("tt0137523", awaitItem()?.imdbId)
             cancelAndIgnoreRemainingEvents()
         }

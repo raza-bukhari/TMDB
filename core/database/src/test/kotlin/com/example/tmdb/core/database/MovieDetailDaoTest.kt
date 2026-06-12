@@ -48,14 +48,14 @@ class MovieDetailDaoTest {
 
     @Test
     fun `given an empty table, when observing an id, then null emits`() = runTest {
-        assertNull(dao.observeById(550).first())
+        assertNull(dao.observeById(550, "MOVIE").first())
     }
 
     @Test
     fun `given an upserted detail, when observing its id, then it emits with fields intact`() = runTest {
         dao.upsert(detail(550, "Fight Club"))
 
-        val loaded = dao.observeById(550).first()
+        val loaded = dao.observeById(550, "MOVIE").first()
 
         assertEquals("Fight Club", loaded?.title)
         assertEquals("Drama|Thriller", loaded?.genres)
@@ -66,6 +66,6 @@ class MovieDetailDaoTest {
         dao.upsert(detail(550, "Old Title"))
         dao.upsert(detail(550, "New Title"))
 
-        assertEquals("New Title", dao.observeById(550).first()?.title)
+        assertEquals("New Title", dao.observeById(550, "MOVIE").first()?.title)
     }
 }

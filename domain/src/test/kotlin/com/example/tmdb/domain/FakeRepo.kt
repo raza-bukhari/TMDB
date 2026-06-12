@@ -46,7 +46,7 @@ class FakeRepo : MovieRepository {
         return movies.map { PagingData.from(it) }
     }
 
-    override fun observeMovieDetail(id: MovieId): Flow<MovieDetail?> {
+    override fun observeMovieDetail(id: MovieId, mediaType: MediaType): Flow<MovieDetail?> {
         lastDetailId = id
         return detail
     }

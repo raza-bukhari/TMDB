@@ -27,7 +27,7 @@ interface MovieRepository {
     fun observeMovies(category: MovieCategory): Flow<PagingData<Movie>>
 
     /** Emits `null` while the movie has never been cached. */
-    fun observeMovieDetail(id: MovieId): Flow<MovieDetail?>
+    fun observeMovieDetail(id: MovieId, mediaType: MediaType = MediaType.MOVIE): Flow<MovieDetail?>
 
     suspend fun refreshMovieDetail(id: MovieId, mediaType: MediaType = MediaType.MOVIE): Result<Unit>
 

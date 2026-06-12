@@ -81,7 +81,7 @@ class MovieDetailRepositoryTest {
     fun `given an uncached movie, when refreshing detail, then observers see null then the cached detail`() = runTest {
         server.enqueue(MockResponse.Builder().code(200).body(fixture("movie_detail_550.json")).build())
 
-        repository.observeMovieDetail(MovieId(550)).test {
+        repository.observeMovieDetail(MovieId(550), MediaType.MOVIE).test {
             assertNull(awaitItem())
 
             val refresh = repository.refreshMovieDetail(MovieId(550))
@@ -103,7 +103,7 @@ class MovieDetailRepositoryTest {
 
         val requestUrl = server.takeRequest().url
         assertEquals("/tv/1396?append_to_response=credits%2Ccontent_ratings%2Csimilar%2Cwatch%2Fproviders", "${requestUrl.encodedPath}?${requestUrl.encodedQuery}")
-        repository.observeMovieDetail(MovieId(1396)).test {
+        repository.observeMovieDetail(MovieId(1396), MediaType.TV).test {
             val detail = awaitItem()
             assertEquals("Breaking Bad", detail?.title)
             assertEquals(5, detail?.numberOfSeasons)
@@ -137,7 +137,7 @@ class MovieDetailRepositoryTest {
         val result = repository.refreshMovieDetail(MovieId(42))
 
         assertEquals(AppError.NotFound, result.appErrorOrNull())
-        repository.observeMovieDetail(MovieId(42)).test {
+        repository.observeMovieDetail(MovieId(42), MediaType.MOVIE).test {
             assertNull(awaitItem())
             cancelAndIgnoreRemainingEvents()
         }

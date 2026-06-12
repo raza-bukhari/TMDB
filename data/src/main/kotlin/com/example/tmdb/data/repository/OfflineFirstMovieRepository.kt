@@ -74,8 +74,8 @@ internal class OfflineFirstMovieRepository(
         ).flow
             .flowOn(dispatchers.default)
 
-    override fun observeMovieDetail(id: MovieId): Flow<MovieDetail?> =
-        detailDao.observeById(id.value)
+    override fun observeMovieDetail(id: MovieId, mediaType: MediaType): Flow<MovieDetail?> =
+        detailDao.observeById(id.value, mediaType.name)
             .map { it?.toDomain() }
             .flowOn(dispatchers.default)
 

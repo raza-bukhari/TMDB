@@ -60,6 +60,7 @@ internal fun MovieDto.toEntity(category: String, orderIndex: Int): MovieEntity =
 
 internal fun MovieDetailDto.toEntity(): MovieDetailEntity = MovieDetailEntity(
     id = id,
+    mediaType = if (numberOfSeasons != null || seasons.isNotEmpty()) MediaType.TV.name else MediaType.MOVIE.name,
     title = displayTitle,
     overview = overview,
     tagline = tagline?.takeIf { it.isNotBlank() },
@@ -95,7 +96,9 @@ internal fun MovieDetailEntity.toDomain(): MovieDetail {
 
     return MovieDetail(
         id = MovieId(id),
-        mediaType = if (numberOfSeasons != null || seasonDtos.isNotEmpty()) MediaType.TV else MediaType.MOVIE,
+        mediaType = runCatching { MediaType.valueOf(mediaType) }.getOrDefault(
+            if (numberOfSeasons != null || seasonDtos.isNotEmpty()) MediaType.TV else MediaType.MOVIE,
+        ),
         title = title,
         overview = overview,
         tagline = tagline,

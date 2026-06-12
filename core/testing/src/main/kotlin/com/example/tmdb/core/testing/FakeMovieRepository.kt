@@ -136,7 +136,7 @@ class FakeMovieRepository : MovieRepository {
     /** When set, detail refresh populates the detail cache on success. */
     var onDetailRefreshCachePopulation: (() -> MovieDetail)? = null
 
-    override fun observeMovieDetail(id: MovieId): Flow<MovieDetail?> {
+    override fun observeMovieDetail(id: MovieId, mediaType: MediaType): Flow<MovieDetail?> {
         lastDetailId = id
         return detailFlow
     }

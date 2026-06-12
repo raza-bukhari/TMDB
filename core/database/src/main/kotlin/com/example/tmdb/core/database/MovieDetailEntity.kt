@@ -1,11 +1,11 @@
 package com.example.tmdb.core.database
 
 import androidx.room.Entity
-import androidx.room.PrimaryKey
 
-@Entity(tableName = "movie_details")
+@Entity(tableName = "movie_details", primaryKeys = ["id", "mediaType"])
 data class MovieDetailEntity(
-    @PrimaryKey val id: Long,
+    val id: Long,
+    val mediaType: String = "MOVIE",
     val title: String,
     val overview: String,
     val tagline: String?,

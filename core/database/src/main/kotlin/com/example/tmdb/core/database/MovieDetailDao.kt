@@ -9,8 +9,8 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface MovieDetailDao {
 
-    @Query("SELECT * FROM movie_details WHERE id = :id")
-    fun observeById(id: Long): Flow<MovieDetailEntity?>
+    @Query("SELECT * FROM movie_details WHERE id = :id AND mediaType = :mediaType")
+    fun observeById(id: Long, mediaType: String): Flow<MovieDetailEntity?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(detail: MovieDetailEntity)

@@ -52,7 +52,7 @@ internal class MovieDetailViewModel(
     private val mediaType = runCatching {
         MediaType.valueOf(savedStateHandle.toRoute<MovieDetailRoute>().mediaType)
     }.getOrDefault(MediaType.MOVIE)
-    private val detailFlow = observeMovieDetail(movieId)
+    private val detailFlow = observeMovieDetail(movieId, mediaType)
     private val watchlistIds = observeWatchlistIds()
         .stateIn(
             scope = viewModelScope,
