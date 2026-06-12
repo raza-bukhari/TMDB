@@ -55,6 +55,32 @@ class MovieDetailApiTest {
     }
 
     @Test
+    fun `given provider payload, when fetching movie watch providers, then region providers map`() = runTest {
+        server.enqueue(
+            MockResponse.Builder().code(200).body(
+                """
+                {
+                  "id": 550,
+                  "results": {
+                    "US": {
+                      "link": "https://www.themoviedb.org/movie/550/watch",
+                      "flatrate": [
+                        { "provider_id": 8, "provider_name": "Netflix", "logo_path": "/netflix.png", "display_priority": 1 }
+                      ]
+                    }
+                  }
+                }
+                """.trimIndent(),
+            ).build(),
+        )
+
+        val providers = api.movieWatchProviders(550)
+
+        assertEquals("Netflix", providers.results.getValue("US").flatrate.first().providerName)
+        assertEquals("/movie/550/watch/providers", server.takeRequest().target)
+    }
+
+    @Test
     fun `given a 404 for an unknown id, when calling through tmdbCall, then NotFound is returned`() = runTest {
         server.enqueue(
             MockResponse.Builder()

@@ -17,6 +17,7 @@ import com.example.tmdb.domain.model.TvEpisode
 import com.example.tmdb.domain.model.TvSeason
 import com.example.tmdb.domain.model.UserMediaActivity
 import com.example.tmdb.domain.model.WatchlistItem
+import com.example.tmdb.domain.model.WatchProviderRegion
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -59,6 +60,8 @@ interface MovieRepository {
     suspend fun externalRatings(imdbId: String): Result<ExternalRatings>
 
     suspend fun videos(id: MovieId, mediaType: MediaType): Result<List<MediaVideo>>
+
+    suspend fun watchProviders(id: MovieId, mediaType: MediaType, region: String = "US"): Result<WatchProviderRegion>
 
     suspend fun tvSeason(seriesId: MovieId, seasonNumber: Int): Result<TvSeason>
 

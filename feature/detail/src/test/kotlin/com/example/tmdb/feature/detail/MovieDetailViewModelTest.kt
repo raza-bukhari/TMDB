@@ -12,10 +12,13 @@ import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
 import com.example.tmdb.domain.model.TvEpisode
 import com.example.tmdb.domain.model.TvSeason
+import com.example.tmdb.domain.model.WatchProvider
+import com.example.tmdb.domain.model.WatchProviderRegion
 import com.example.tmdb.domain.usecase.AddMovieToWatchlistUseCase
 import com.example.tmdb.domain.usecase.GetExternalRatingsUseCase
 import com.example.tmdb.domain.usecase.GetMediaVideosUseCase
 import com.example.tmdb.domain.usecase.GetTvSeasonUseCase
+import com.example.tmdb.domain.usecase.GetWatchProvidersUseCase
 import com.example.tmdb.domain.usecase.ObserveMovieDetailUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistKeysUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistItemsUseCase
@@ -61,6 +64,7 @@ class MovieDetailViewModelTest {
         getExternalRatings = GetExternalRatingsUseCase(repository),
         getMediaVideos = GetMediaVideosUseCase(repository),
         getTvSeason = GetTvSeasonUseCase(repository),
+        getWatchProviders = GetWatchProvidersUseCase(repository),
         observeWatchlistItems = ObserveWatchlistItemsUseCase(repository),
         observeWatchlistKeys = ObserveWatchlistKeysUseCase(repository),
         addMovieToWatchlist = AddMovieToWatchlistUseCase(repository),
@@ -163,6 +167,28 @@ class MovieDetailViewModelTest {
                 "https://www.youtube.com/watch?v=abc123",
                 (state.content as MovieDetailContent.Detail).detail.trailerUrl,
             )
+        }
+    }
+
+    @Test
+    fun `given watch providers load, when detail renders, then provider logos come from region response`() = runTest {
+        repository.onDetailRefreshCachePopulation = { aDetail }
+        repository.watchProvidersResult = Result.success(
+            WatchProviderRegion(
+                region = "US",
+                link = "https://www.themoviedb.org/movie/550/watch",
+                flatrate = listOf(WatchProvider(id = 8, name = "Netflix", logoPath = "/netflix.png")),
+            ),
+        )
+
+        viewModel().uiState.test {
+            val state = expectMostRecentItemAfter {
+                (it.content as? MovieDetailContent.Detail)?.detail?.watchProviders?.isNotEmpty() == true
+            }
+
+            val providers = (state.content as MovieDetailContent.Detail).detail.watchProviders
+            assertEquals("Netflix", providers.first().name)
+            assertEquals("https://image.tmdb.org/t/p/w92/netflix.png", providers.first().logoUrl)
         }
     }
 

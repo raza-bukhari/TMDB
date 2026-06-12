@@ -8,6 +8,7 @@ import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MediaVideo
 import com.example.tmdb.domain.model.TvEpisode
 import com.example.tmdb.domain.model.TvSeason
+import com.example.tmdb.domain.model.WatchProvider
 import com.example.tmdb.domain.model.WatchlistItem
 import com.example.tmdb.domain.model.WatchlistStatus
 import kotlinx.collections.immutable.ImmutableList
@@ -130,6 +131,7 @@ private const val LOGO_BASE = "https://image.tmdb.org/t/p/w92"
 internal fun MovieDetail.toUi(
     externalRatings: ExternalRatings = ExternalRatings(),
     isWatchlisted: Boolean = false,
+    watchProvidersOverride: List<WatchProvider>? = null,
 ): MovieDetailUi = MovieDetailUi(
     id = id.value,
     title = title,
@@ -167,7 +169,7 @@ internal fun MovieDetail.toUi(
             rating = movie.voteAverage
         )
     }.toImmutableList(),
-    watchProviders = watchProviders.map { provider ->
+    watchProviders = (watchProvidersOverride ?: watchProviders).map { provider ->
         WatchProviderUi(
             id = provider.id,
             name = provider.name,

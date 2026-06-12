@@ -9,6 +9,7 @@ import com.example.tmdb.domain.usecase.GetPersonCreditsUseCase
 import com.example.tmdb.domain.usecase.GetPersonDetailUseCase
 import com.example.tmdb.domain.usecase.GetTvEpisodeUseCase
 import com.example.tmdb.domain.usecase.GetTvSeasonUseCase
+import com.example.tmdb.domain.usecase.GetWatchProvidersUseCase
 import com.example.tmdb.domain.usecase.ObserveMovieDetailUseCase
 import com.example.tmdb.domain.usecase.ObserveMoviesUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistItemsUseCase
@@ -28,6 +29,7 @@ val domainModule = module {
     factoryOf(::GetPersonDetailUseCase)
     factoryOf(::GetTvEpisodeUseCase)
     factoryOf(::GetTvSeasonUseCase)
+    factoryOf(::GetWatchProvidersUseCase)
     factoryOf(::GetHomeListUseCase)
     factoryOf(::ObserveMoviesUseCase)
     factoryOf(::ObserveMovieDetailUseCase)

@@ -15,6 +15,7 @@ import com.example.tmdb.core.network.dto.TvEpisodeDto
 import com.example.tmdb.core.network.dto.TvSeasonDto
 import com.example.tmdb.core.network.dto.VideoDto
 import com.example.tmdb.core.network.dto.WatchProviderDto
+import com.example.tmdb.core.network.dto.WatchProvidersResultDto
 import com.example.tmdb.domain.model.CastMember
 import com.example.tmdb.domain.model.CrewMember
 import com.example.tmdb.domain.model.ExternalRatings
@@ -29,6 +30,7 @@ import com.example.tmdb.domain.model.SearchResults
 import com.example.tmdb.domain.model.TvEpisode
 import com.example.tmdb.domain.model.TvSeason
 import com.example.tmdb.domain.model.WatchProvider
+import com.example.tmdb.domain.model.WatchProviderRegion
 import com.example.tmdb.domain.model.WatchlistItem
 import com.example.tmdb.domain.model.WatchlistStatus
 import java.time.LocalDate
@@ -147,6 +149,14 @@ internal fun WatchProviderDto.toDomain(): WatchProvider = WatchProvider(
     id = providerId,
     name = providerName,
     logoPath = logoPath
+)
+
+internal fun WatchProvidersResultDto.toDomain(region: String): WatchProviderRegion = WatchProviderRegion(
+    region = region,
+    link = link,
+    flatrate = flatrate.map { it.toDomain() },
+    rent = rent.map { it.toDomain() },
+    buy = buy.map { it.toDomain() },
 )
 
 internal fun VideoDto.toDomain(): MediaVideo = MediaVideo(

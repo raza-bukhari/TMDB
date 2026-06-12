@@ -129,6 +129,37 @@ class MovieDetailRepositoryTest {
     }
 
     @Test
+    fun `given watch providers request, when loading movie providers, then region providers map`() = runTest {
+        server.enqueue(
+            MockResponse.Builder().code(200).body(
+                """
+                {
+                  "id": 550,
+                  "results": {
+                    "US": {
+                      "link": "https://www.themoviedb.org/movie/550/watch",
+                      "flatrate": [
+                        { "provider_id": 8, "provider_name": "Netflix", "logo_path": "/netflix.png", "display_priority": 1 }
+                      ],
+                      "rent": [
+                        { "provider_id": 10, "provider_name": "Amazon Video", "logo_path": "/amazon.png", "display_priority": 2 }
+                      ]
+                    }
+                  }
+                }
+                """.trimIndent(),
+            ).build(),
+        )
+
+        val providers = repository.watchProviders(MovieId(550), MediaType.MOVIE, region = "US").getOrThrow()
+
+        val requestUrl = server.takeRequest().url
+        assertEquals("/movie/550/watch/providers", requestUrl.encodedPath)
+        assertEquals("US", providers.region)
+        assertEquals(listOf("Netflix", "Amazon Video"), providers.displayProviders.map { it.name })
+    }
+
+    @Test
     fun `given TMDB returns 404, when refreshing detail, then the error is typed and nothing is cached`() = runTest {
         server.enqueue(
             MockResponse.Builder().code(404).body("""{"status_code":34,"status_message":"not found"}""").build(),

@@ -8,6 +8,7 @@ import com.example.tmdb.core.network.dto.PersonDto
 import com.example.tmdb.core.network.dto.TvEpisodeDto
 import com.example.tmdb.core.network.dto.TvSeasonDto
 import com.example.tmdb.core.network.dto.VideosResponseDto
+import com.example.tmdb.core.network.dto.WatchProvidersResponseDto
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -57,10 +58,20 @@ interface TmdbApi {
         @Path("movie_id") movieId: Long,
     ): VideosResponseDto
 
+    @GET("movie/{movie_id}/watch/providers")
+    suspend fun movieWatchProviders(
+        @Path("movie_id") movieId: Long,
+    ): WatchProvidersResponseDto
+
     @GET("tv/{series_id}/videos")
     suspend fun tvVideos(
         @Path("series_id") seriesId: Long,
     ): VideosResponseDto
+
+    @GET("tv/{series_id}/watch/providers")
+    suspend fun tvWatchProviders(
+        @Path("series_id") seriesId: Long,
+    ): WatchProvidersResponseDto
 
     @GET("tv/{series_id}/season/{season_number}")
     suspend fun tvSeason(

@@ -33,6 +33,7 @@ import com.example.tmdb.domain.model.PersonCredits
 import com.example.tmdb.domain.model.TvEpisode
 import com.example.tmdb.domain.model.TvSeason
 import com.example.tmdb.domain.model.UserMediaActivity
+import com.example.tmdb.domain.model.WatchProviderRegion
 import com.example.tmdb.domain.model.WatchlistItem
 import com.example.tmdb.domain.repository.MovieRepository
 import kotlinx.coroutines.flow.Flow
@@ -174,6 +175,19 @@ internal class OfflineFirstMovieRepository(
                             .thenBy { if (it.type.equals("Trailer", ignoreCase = true)) 0 else 1 },
                     )
                     .map { it.toDomain() }
+            }
+        }
+
+    override suspend fun watchProviders(id: MovieId, mediaType: MediaType, region: String): Result<WatchProviderRegion> =
+        withContext(dispatchers.io) {
+            tmdbCall {
+                when (mediaType) {
+                    MediaType.MOVIE -> api.movieWatchProviders(id.value)
+                    MediaType.TV -> api.tvWatchProviders(id.value)
+                }
+            }.map { response ->
+                response.results[region]?.toDomain(region)
+                    ?: WatchProviderRegion(region = region, link = null)
             }
         }
 

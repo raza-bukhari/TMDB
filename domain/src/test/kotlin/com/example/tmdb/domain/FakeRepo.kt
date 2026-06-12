@@ -16,6 +16,7 @@ import com.example.tmdb.domain.model.PersonCredits
 import com.example.tmdb.domain.model.TvEpisode
 import com.example.tmdb.domain.model.TvSeason
 import com.example.tmdb.domain.model.UserMediaActivity
+import com.example.tmdb.domain.model.WatchProviderRegion
 import com.example.tmdb.domain.model.WatchlistItem
 import com.example.tmdb.domain.model.WatchlistStatus
 import com.example.tmdb.domain.repository.MovieRepository
@@ -77,6 +78,9 @@ class FakeRepo : MovieRepository {
 
     override suspend fun videos(id: MovieId, mediaType: MediaType): Result<List<MediaVideo>> =
         Result.success(emptyList())
+
+    override suspend fun watchProviders(id: MovieId, mediaType: MediaType, region: String): Result<WatchProviderRegion> =
+        Result.success(WatchProviderRegion(region = region, link = null))
 
     override suspend fun tvSeason(seriesId: MovieId, seasonNumber: Int): Result<TvSeason> =
         Result.success(

@@ -12,12 +12,14 @@ import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
 import com.example.tmdb.domain.model.UserMediaActivity
+import com.example.tmdb.domain.model.WatchProviderRegion
 import com.example.tmdb.domain.model.WatchlistStatus
 import com.example.tmdb.domain.model.appErrorOrNull
 import com.example.tmdb.domain.usecase.AddMovieToWatchlistUseCase
 import com.example.tmdb.domain.usecase.GetExternalRatingsUseCase
 import com.example.tmdb.domain.usecase.GetMediaVideosUseCase
 import com.example.tmdb.domain.usecase.GetTvSeasonUseCase
+import com.example.tmdb.domain.usecase.GetWatchProvidersUseCase
 import com.example.tmdb.domain.usecase.ObserveMovieDetailUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistKeysUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistItemsUseCase
@@ -42,6 +44,7 @@ internal class MovieDetailViewModel(
     private val getExternalRatings: GetExternalRatingsUseCase,
     private val getMediaVideos: GetMediaVideosUseCase,
     private val getTvSeason: GetTvSeasonUseCase,
+    private val getWatchProviders: GetWatchProvidersUseCase,
     observeWatchlistItems: ObserveWatchlistItemsUseCase,
     private val observeWatchlistKeys: ObserveWatchlistKeysUseCase,
     private val addMovieToWatchlist: AddMovieToWatchlistUseCase,
@@ -72,6 +75,7 @@ internal class MovieDetailViewModel(
     private val refreshError = MutableStateFlow<AppError?>(null)
     private val externalRatings = MutableStateFlow(ExternalRatings())
     private val trailerUrl = MutableStateFlow<String?>(null)
+    private val watchProviderRegion = MutableStateFlow<WatchProviderRegion?>(null)
     private val seasonEpisodes = MutableStateFlow<List<TvEpisodeUi>>(emptyList())
     private var latestDetail: MovieDetail? = null
     private var loadedSeasonNumber: Int? = null
@@ -88,7 +92,7 @@ internal class MovieDetailViewModel(
         }
 
     val uiState: StateFlow<MovieDetailUiState> =
-        combine(detailState, trailerUrl, seasonEpisodes, userActivity) { detailState, trailer, episodes, activity ->
+        combine(detailState, trailerUrl, seasonEpisodes, userActivity, watchProviderRegion) { detailState, trailer, episodes, activity, providers ->
             val detail = detailState.detail
             latestDetail = detail
             MovieDetailUiState(
@@ -98,6 +102,7 @@ internal class MovieDetailViewModel(
                         detail.toUi(
                             externalRatings = detailState.ratings,
                             isWatchlisted = detail.mediaKey in detailState.savedKeys,
+                            watchProvidersOverride = providers?.displayProviders,
                         ).copy(
                             trailerUrl = trailer,
                             episodes = episodes.toImmutableList(),
@@ -121,6 +126,7 @@ internal class MovieDetailViewModel(
         observeExternalRatings()
         observeSeasonEpisodes()
         loadVideos()
+        loadWatchProviders()
     }
 
     fun onRetryClicked() = refresh()
@@ -181,6 +187,12 @@ internal class MovieDetailViewModel(
             trailerUrl.value = getMediaVideos(movieId, mediaType)
                 .getOrDefault(emptyList())
                 .primaryTrailerUrl()
+        }
+    }
+
+    private fun loadWatchProviders() {
+        viewModelScope.launch {
+            watchProviderRegion.value = getWatchProviders(movieId, mediaType, region = "US").getOrNull()
         }
     }
 
