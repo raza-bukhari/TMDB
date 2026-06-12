@@ -123,7 +123,8 @@ internal fun MovieListItem.matches(query: String, filters: MovieFilters): Boolea
     val ratingOk = rating >= filters.minRating
     val yearOk = if (year == null) yearWindowFull else year in filters.fromYear..filters.toYear
     val genreOk = genreIds.isEmpty() || this.genreIds.any { it in genreIds }
-    return queryOk && ratingOk && yearOk && genreOk
+    val mediaTypeOk = mediaType == filters.mediaType
+    return queryOk && ratingOk && yearOk && genreOk && mediaTypeOk
 }
 
 internal fun List<MovieListItem>.applyFilters(query: String, filters: MovieFilters): List<MovieListItem> {

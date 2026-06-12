@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import androidx.paging.filter
 import androidx.paging.map
 import com.example.tmdb.domain.model.AppError
 import com.example.tmdb.domain.model.HomeList
@@ -89,7 +90,17 @@ internal class MoviesViewModel(
             } else {
                 searchMovies(request.query)
             }
-            movies.map { pagingData -> pagingData.map { movie -> movie.toListItem() } }
+            movies.map { pagingData ->
+                pagingData
+                    .map { movie -> movie.toListItem() }
+                    .let { results ->
+                        if (request.query.isBlank()) {
+                            results
+                        } else {
+                            results.filter { movie -> movie.matches(query = "", filters = request.filters) }
+                        }
+                    }
+            }
         }
         .cachedIn(viewModelScope)
 
