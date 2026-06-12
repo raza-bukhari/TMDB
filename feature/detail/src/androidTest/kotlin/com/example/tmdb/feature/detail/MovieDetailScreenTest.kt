@@ -55,6 +55,10 @@ class MovieDetailScreenTest {
                     onRetryClick = {},
                     onTrailerClick = {},
                     onWatchlistToggle = {},
+                    onActivityStatusSelected = {},
+                    onFavoriteToggle = {},
+                    onUserRatingSelected = {},
+                    onNotesChanged = {},
                 )
             }
         }
@@ -78,6 +82,10 @@ class MovieDetailScreenTest {
                     onRetryClick = { retried = true },
                     onTrailerClick = {},
                     onWatchlistToggle = {},
+                    onActivityStatusSelected = {},
+                    onFavoriteToggle = {},
+                    onUserRatingSelected = {},
+                    onNotesChanged = {},
                 )
             }
         }
@@ -99,6 +107,10 @@ class MovieDetailScreenTest {
                     onRetryClick = {},
                     onTrailerClick = {},
                     onWatchlistToggle = {},
+                    onActivityStatusSelected = {},
+                    onFavoriteToggle = {},
+                    onUserRatingSelected = {},
+                    onNotesChanged = {},
                 )
             }
         }
@@ -124,6 +136,10 @@ class MovieDetailScreenTest {
                     onRetryClick = {},
                     onTrailerClick = { openedUrl = it },
                     onWatchlistToggle = {},
+                    onActivityStatusSelected = {},
+                    onFavoriteToggle = {},
+                    onUserRatingSelected = {},
+                    onNotesChanged = {},
                 )
             }
         }

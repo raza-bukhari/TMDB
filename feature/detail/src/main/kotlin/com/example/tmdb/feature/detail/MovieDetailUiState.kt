@@ -8,6 +8,8 @@ import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MediaVideo
 import com.example.tmdb.domain.model.TvEpisode
 import com.example.tmdb.domain.model.TvSeason
+import com.example.tmdb.domain.model.WatchlistItem
+import com.example.tmdb.domain.model.WatchlistStatus
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -72,6 +74,15 @@ data class TvEpisodeUi(
 )
 
 @Immutable
+data class UserActivityUi(
+    val status: WatchlistStatus = WatchlistStatus.PLAN_TO_WATCH,
+    val favorite: Boolean = false,
+    val userRating: Double? = null,
+    val watchedDate: String? = null,
+    val notes: String = "",
+)
+
+@Immutable
 data class MovieDetailUi(
     val id: Long,
     val title: String,
@@ -98,6 +109,7 @@ data class MovieDetailUi(
     val watchProviders: ImmutableList<WatchProviderUi>,
     val trailerUrl: String? = null,
     val externalRatings: ExternalRatingsUi = ExternalRatingsUi(),
+    val userActivity: UserActivityUi? = null,
     val isWatchlisted: Boolean = false,
 )
 
@@ -164,6 +176,7 @@ internal fun MovieDetail.toUi(
     }.toImmutableList(),
     trailerUrl = null,
     externalRatings = externalRatings.toUi(),
+    userActivity = null,
     isWatchlisted = isWatchlisted,
 )
 
@@ -192,6 +205,14 @@ internal fun TvEpisode.toUi(): TvEpisodeUi = TvEpisodeUi(
     runtime = runtimeMinutes?.let { formatRuntime(it) },
     rating = voteAverage,
     overview = overview,
+)
+
+internal fun WatchlistItem.toActivityUi(): UserActivityUi = UserActivityUi(
+    status = status,
+    favorite = favorite,
+    userRating = userRating,
+    watchedDate = watchedDate?.toString(),
+    notes = notes,
 )
 
 private fun ExternalRatings.toUi(): ExternalRatingsUi = ExternalRatingsUi(

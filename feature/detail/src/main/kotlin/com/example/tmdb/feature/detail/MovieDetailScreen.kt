@@ -33,6 +33,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -60,10 +62,12 @@ import com.example.tmdb.core.designsystem.ThemePreviews
 import com.example.tmdb.core.designsystem.component.ErrorState
 import com.example.tmdb.core.designsystem.component.GlassSurface
 import com.example.tmdb.core.designsystem.component.GradientPrimaryButton
+import com.example.tmdb.core.designsystem.component.FilterChipPill
 import com.example.tmdb.core.designsystem.component.LoadingState
 import com.example.tmdb.core.designsystem.component.RatingRing
 import com.example.tmdb.core.designsystem.theme.TMDBTheme
 import com.example.tmdb.domain.model.AppError
+import com.example.tmdb.domain.model.WatchlistStatus
 import kotlinx.collections.immutable.persistentListOf
 import org.koin.androidx.compose.koinViewModel
 
@@ -96,6 +100,10 @@ fun MovieDetailScreen(
         onRetryClick = viewModel::onRetryClicked,
         onWatchlistToggle = viewModel::onWatchlistToggle,
         onTrailerClick = { url -> uriHandler.openUri(url) },
+        onActivityStatusSelected = viewModel::onActivityStatusSelected,
+        onFavoriteToggle = viewModel::onFavoriteToggle,
+        onUserRatingSelected = viewModel::onUserRatingSelected,
+        onNotesChanged = viewModel::onNotesChanged,
         modifier = modifier,
     )
 }
@@ -109,6 +117,10 @@ internal fun MovieDetailScreenContent(
     onRetryClick: () -> Unit,
     onWatchlistToggle: () -> Unit,
     onTrailerClick: (String) -> Unit,
+    onActivityStatusSelected: (WatchlistStatus) -> Unit,
+    onFavoriteToggle: () -> Unit,
+    onUserRatingSelected: (Double?) -> Unit,
+    onNotesChanged: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(modifier = modifier.fillMaxSize()) {
@@ -119,7 +131,18 @@ internal fun MovieDetailScreenContent(
                     ErrorState(message = content.error.toUserMessage(), onRetryClick = onRetryClick)
                     BackButton(onBackClick, scrim = false)
                 }
-                is MovieDetailContent.Detail -> CollapsingDetail(content.detail, onBackClick, onMovieClick, onPersonClick, onWatchlistToggle, onTrailerClick)
+                is MovieDetailContent.Detail -> CollapsingDetail(
+                    detail = content.detail,
+                    onBackClick = onBackClick,
+                    onMovieClick = onMovieClick,
+                    onPersonClick = onPersonClick,
+                    onWatchlistToggle = onWatchlistToggle,
+                    onTrailerClick = onTrailerClick,
+                    onActivityStatusSelected = onActivityStatusSelected,
+                    onFavoriteToggle = onFavoriteToggle,
+                    onUserRatingSelected = onUserRatingSelected,
+                    onNotesChanged = onNotesChanged,
+                )
             }
         }
     }
@@ -133,6 +156,10 @@ private fun CollapsingDetail(
     onPersonClick: (Long) -> Unit,
     onWatchlistToggle: () -> Unit,
     onTrailerClick: (String) -> Unit,
+    onActivityStatusSelected: (WatchlistStatus) -> Unit,
+    onFavoriteToggle: () -> Unit,
+    onUserRatingSelected: (Double?) -> Unit,
+    onNotesChanged: (String) -> Unit,
 ) {
     val scroll = rememberScrollState()
     val density = LocalDensity.current
@@ -174,7 +201,18 @@ private fun CollapsingDetail(
                 .verticalScroll(scroll),
         ) {
             Spacer(Modifier.height(HeaderMaxHeight))
-            DetailInfo(detail, onMovieClick, onPersonClick, onWatchlistToggle, onTrailerClick, modifier = Modifier.heightIn(min = infoMinHeight))
+            DetailInfo(
+                detail = detail,
+                onMovieClick = onMovieClick,
+                onPersonClick = onPersonClick,
+                onWatchlistToggle = onWatchlistToggle,
+                onTrailerClick = onTrailerClick,
+                onActivityStatusSelected = onActivityStatusSelected,
+                onFavoriteToggle = onFavoriteToggle,
+                onUserRatingSelected = onUserRatingSelected,
+                onNotesChanged = onNotesChanged,
+                modifier = Modifier.heightIn(min = infoMinHeight),
+            )
         }
 
         Box(
@@ -216,6 +254,10 @@ private fun DetailInfo(
     onPersonClick: (Long) -> Unit,
     onWatchlistToggle: () -> Unit,
     onTrailerClick: (String) -> Unit,
+    onActivityStatusSelected: (WatchlistStatus) -> Unit,
+    onFavoriteToggle: () -> Unit,
+    onUserRatingSelected: (Double?) -> Unit,
+    onNotesChanged: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -298,6 +340,16 @@ private fun DetailInfo(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+
+        MyActivityPanel(
+            activity = detail.userActivity,
+            isWatchlisted = detail.isWatchlisted,
+            onStatusSelected = onActivityStatusSelected,
+            onFavoriteToggle = onFavoriteToggle,
+            onRatingSelected = onUserRatingSelected,
+            onNotesChanged = onNotesChanged,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        )
 
         if (detail.seasons.isNotEmpty()) {
             SeasonsSection(detail.seasons)
@@ -450,6 +502,81 @@ private fun DetailInfo(
         }
     }
 }
+
+@Composable
+private fun MyActivityPanel(
+    activity: UserActivityUi?,
+    isWatchlisted: Boolean,
+    onStatusSelected: (WatchlistStatus) -> Unit,
+    onFavoriteToggle: () -> Unit,
+    onRatingSelected: (Double?) -> Unit,
+    onNotesChanged: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val current = activity ?: UserActivityUi()
+    GlassSurface(modifier = modifier, contentPadding = PaddingValues(14.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(text = "My Activity", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        text = if (isWatchlisted) "Saved locally" else "Save locally when you set activity",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                FilterChipPill(
+                    text = if (current.favorite) "Favorite" else "Mark favorite",
+                    selected = current.favorite,
+                    onClick = onFavoriteToggle,
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                WatchlistStatus.entries.forEach { status ->
+                    FilterChipPill(
+                        text = status.label,
+                        selected = current.status == status,
+                        onClick = { onStatusSelected(status) },
+                    )
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(text = "Your rating", style = MaterialTheme.typography.labelLarge)
+                listOf(6.0, 7.0, 8.0, 9.0, 10.0).forEach { rating ->
+                    FilterChipPill(
+                        text = rating.toInt().toString(),
+                        selected = current.userRating == rating,
+                        onClick = { onRatingSelected(if (current.userRating == rating) null else rating) },
+                    )
+                }
+            }
+
+            OutlinedTextField(
+                value = current.notes,
+                onValueChange = onNotesChanged,
+                label = { Text("Notes") },
+                minLines = 2,
+                maxLines = 4,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White.copy(alpha = 0.06f),
+                    unfocusedContainerColor = Color.White.copy(alpha = 0.04f),
+                    focusedBorderColor = MaterialTheme.colorScheme.secondary,
+                    unfocusedBorderColor = Color.White.copy(alpha = 0.16f),
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+private val WatchlistStatus.label: String
+    get() = when (this) {
+        WatchlistStatus.PLAN_TO_WATCH -> "Plan"
+        WatchlistStatus.WATCHING -> "Watching"
+        WatchlistStatus.COMPLETED -> "Completed"
+    }
 
 @Composable
 private fun SeriesStatsRow(detail: MovieDetailUi) {
@@ -748,6 +875,10 @@ private fun MovieDetailPreview() {
             onRetryClick = {},
             onWatchlistToggle = {},
             onTrailerClick = {},
+            onActivityStatusSelected = {},
+            onFavoriteToggle = {},
+            onUserRatingSelected = {},
+            onNotesChanged = {},
         )
     }
 }

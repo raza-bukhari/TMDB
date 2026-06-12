@@ -10,6 +10,8 @@ import com.example.tmdb.domain.model.ExternalRatings
 import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
+import com.example.tmdb.domain.model.UserMediaActivity
+import com.example.tmdb.domain.model.WatchlistStatus
 import com.example.tmdb.domain.model.appErrorOrNull
 import com.example.tmdb.domain.usecase.AddMovieToWatchlistUseCase
 import com.example.tmdb.domain.usecase.GetExternalRatingsUseCase
@@ -17,8 +19,10 @@ import com.example.tmdb.domain.usecase.GetMediaVideosUseCase
 import com.example.tmdb.domain.usecase.GetTvSeasonUseCase
 import com.example.tmdb.domain.usecase.ObserveMovieDetailUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistIdsUseCase
+import com.example.tmdb.domain.usecase.ObserveWatchlistItemsUseCase
 import com.example.tmdb.domain.usecase.RefreshMovieDetailUseCase
 import com.example.tmdb.domain.usecase.RemoveMovieFromWatchlistUseCase
+import com.example.tmdb.domain.usecase.UpdateUserActivityUseCase
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,9 +41,11 @@ internal class MovieDetailViewModel(
     private val getExternalRatings: GetExternalRatingsUseCase,
     private val getMediaVideos: GetMediaVideosUseCase,
     private val getTvSeason: GetTvSeasonUseCase,
+    observeWatchlistItems: ObserveWatchlistItemsUseCase,
     private val observeWatchlistIds: ObserveWatchlistIdsUseCase,
     private val addMovieToWatchlist: AddMovieToWatchlistUseCase,
     private val removeMovieFromWatchlist: RemoveMovieFromWatchlistUseCase,
+    private val updateUserActivity: UpdateUserActivityUseCase,
 ) : ViewModel() {
 
     private val movieId = MovieId(savedStateHandle.toRoute<MovieDetailRoute>().movieId)
@@ -52,6 +58,13 @@ internal class MovieDetailViewModel(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = emptySet(),
+        )
+    private val userActivity = observeWatchlistItems()
+        .map { items -> items.firstOrNull { it.movie.id == movieId }?.toActivityUi() }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = null,
         )
 
     private val isRefreshing = MutableStateFlow(true)
@@ -74,7 +87,7 @@ internal class MovieDetailViewModel(
         }
 
     val uiState: StateFlow<MovieDetailUiState> =
-        combine(detailState, trailerUrl, seasonEpisodes) { detailState, trailer, episodes ->
+        combine(detailState, trailerUrl, seasonEpisodes, userActivity) { detailState, trailer, episodes, activity ->
             val detail = detailState.detail
             latestDetail = detail
             MovieDetailUiState(
@@ -87,6 +100,7 @@ internal class MovieDetailViewModel(
                         ).copy(
                             trailerUrl = trailer,
                             episodes = episodes.toImmutableList(),
+                            userActivity = activity,
                         ),
                     )
                     detailState.refreshing -> MovieDetailContent.Loading
@@ -119,6 +133,22 @@ internal class MovieDetailViewModel(
                 addMovieToWatchlist(detail)
             }
         }
+    }
+
+    fun onActivityStatusSelected(status: WatchlistStatus) {
+        updateActivity { it.copy(status = status) }
+    }
+
+    fun onFavoriteToggle() {
+        updateActivity { it.copy(favorite = !it.favorite) }
+    }
+
+    fun onUserRatingSelected(rating: Double?) {
+        updateActivity { it.copy(userRating = rating) }
+    }
+
+    fun onNotesChanged(notes: String) {
+        updateActivity { it.copy(notes = notes) }
     }
 
     private fun refresh() {
@@ -168,6 +198,25 @@ internal class MovieDetailViewModel(
                         ?.map { it.toUi() }
                         .orEmpty()
                 }
+        }
+    }
+
+    private fun updateActivity(transform: (UserActivityUi) -> UserActivityUi) {
+        viewModelScope.launch {
+            val detail = latestDetail ?: return@launch
+            if (detail.id !in watchlistIds.value) {
+                addMovieToWatchlist(detail)
+            }
+            val next = transform(userActivity.value ?: UserActivityUi())
+            updateUserActivity(
+                UserMediaActivity(
+                    mediaId = detail.id,
+                    status = next.status,
+                    favorite = next.favorite,
+                    userRating = next.userRating,
+                    notes = next.notes,
+                ),
+            )
         }
     }
 

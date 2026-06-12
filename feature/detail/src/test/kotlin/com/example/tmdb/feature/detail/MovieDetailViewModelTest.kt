@@ -18,8 +18,10 @@ import com.example.tmdb.domain.usecase.GetMediaVideosUseCase
 import com.example.tmdb.domain.usecase.GetTvSeasonUseCase
 import com.example.tmdb.domain.usecase.ObserveMovieDetailUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistIdsUseCase
+import com.example.tmdb.domain.usecase.ObserveWatchlistItemsUseCase
 import com.example.tmdb.domain.usecase.RefreshMovieDetailUseCase
 import com.example.tmdb.domain.usecase.RemoveMovieFromWatchlistUseCase
+import com.example.tmdb.domain.usecase.UpdateUserActivityUseCase
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -59,9 +61,11 @@ class MovieDetailViewModelTest {
         getExternalRatings = GetExternalRatingsUseCase(repository),
         getMediaVideos = GetMediaVideosUseCase(repository),
         getTvSeason = GetTvSeasonUseCase(repository),
+        observeWatchlistItems = ObserveWatchlistItemsUseCase(repository),
         observeWatchlistIds = ObserveWatchlistIdsUseCase(repository),
         addMovieToWatchlist = AddMovieToWatchlistUseCase(repository),
         removeMovieFromWatchlist = RemoveMovieFromWatchlistUseCase(repository),
+        updateUserActivity = UpdateUserActivityUseCase(repository),
     )
 
     @Test
