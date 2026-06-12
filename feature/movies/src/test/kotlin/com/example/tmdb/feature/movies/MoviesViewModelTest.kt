@@ -5,16 +5,13 @@ import com.example.tmdb.core.testing.FakeMovieRepository
 import com.example.tmdb.core.testing.MainDispatcherRule
 import com.example.tmdb.domain.model.AppError
 import com.example.tmdb.domain.model.AppException
+import com.example.tmdb.domain.model.HomeList
 import com.example.tmdb.domain.model.Movie
-import com.example.tmdb.domain.model.MovieCategory
 import com.example.tmdb.domain.model.MovieId
-import com.example.tmdb.domain.model.MoviePage
-import com.example.tmdb.domain.usecase.LoadMoreMoviesUseCase
-import com.example.tmdb.domain.usecase.ObserveMoviesUseCase
-import com.example.tmdb.domain.usecase.RefreshMoviesUseCase
+import com.example.tmdb.domain.usecase.GetHomeListUseCase
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Rule
 import org.junit.Test
 
@@ -26,149 +23,57 @@ class MoviesViewModelTest {
     private val repository = FakeMovieRepository()
 
     private fun viewModel() = MoviesViewModel(
-        observeMovies = ObserveMoviesUseCase(repository),
-        refreshMovies = RefreshMoviesUseCase(repository),
-        loadMoreMovies = LoadMoreMoviesUseCase(repository),
+        getHomeList = GetHomeListUseCase(repository),
     )
 
     private fun movie(id: Long, title: String = "Movie $id") = Movie(
         id = MovieId(id),
         title = title,
-        overview = "",
+        overview = "Overview $id",
         posterPath = "/p$id.jpg",
-        backdropPath = null,
+        backdropPath = "/b$id.jpg",
         releaseDate = null,
         voteAverage = 7.5,
         voteCount = 10,
     )
 
-    /** Configures refresh to seed [category]'s cache with [movies] and report [totalPages]. */
-    private fun seedRefresh(category: MovieCategory, movies: List<Movie>, totalPages: Int = 1) {
-        repository.onRefresh = { c ->
-            if (c == category) repository.moviesFlow(c).value = movies
-            Result.success(MoviePage(page = 1, totalPages = totalPages))
+    @Test
+    fun `given home lists load, when observing state, then hero and sections are populated`() = runTest {
+        repository.onHomeList = { list -> Result.success(listOf(movie(id = list.ordinal.toLong() + 1))) }
+
+        viewModel().uiState.test {
+            val loaded = expectMostRecentItemAfter { !it.isLoading && it.sections.isNotEmpty() }
+
+            assertEquals("Movie 1", loaded.hero?.title)
+            assertEquals(listOf("Trending", "What's Popular", "In Theaters", "Top Rated", "Coming Soon"), loaded.sections.map { it.title })
+            assertFalse(loaded.isRefreshing)
         }
     }
 
     @Test
-    fun `given refresh succeeds with movies, when observing state, then content moves Loading to Movies`() = runTest {
-        seedRefresh(MovieCategory.POPULAR, listOf(movie(550, "Fight Club")))
+    fun `given weekly trending selected, when home reloads, then weekly trending list is requested`() = runTest {
+        repository.onHomeList = { list -> Result.success(listOf(movie(id = list.ordinal.toLong() + 1))) }
         val viewModel = viewModel()
 
         viewModel.uiState.test {
-            assertEquals(MoviesContent.Loading, awaitItem().content)
-            val loaded = expectMostRecentItemAfter { it.content is MoviesContent.Movies && !it.isRefreshing }
-            assertEquals(
-                MovieListItem(550, "Fight Club", "https://image.tmdb.org/t/p/w342/p550.jpg", 7.5, null),
-                (loaded.content as MoviesContent.Movies).movies.single(),
-            )
+            expectMostRecentItemAfter { !it.isLoading }
+
+            viewModel.onTrendingWindowSelected(TrendingWindow.THIS_WEEK)
+
+            val weekly = expectMostRecentItemAfter { it.trendingWindow == TrendingWindow.THIS_WEEK && !it.isRefreshing }
+            assertEquals("Movies people talked about this week", weekly.sections.first().subtitle)
         }
+        assertEquals(HomeList.TRENDING_THIS_WEEK, repository.homeListCalls.last { it.name.startsWith("TRENDING") })
     }
 
     @Test
-    fun `given empty cache and refresh fails offline, when observing state, then content is a typed Error`() = runTest {
-        repository.onRefresh = { Result.failure(AppException(AppError.Offline)) }
-        val viewModel = viewModel()
+    fun `given home load fails, when observing state, then a typed error message is shown`() = runTest {
+        repository.onHomeList = { Result.failure(AppException(AppError.Offline)) }
 
-        viewModel.uiState.test {
-            val state = expectMostRecentItemAfter { it.content is MoviesContent.Error }
-            assertEquals(MoviesContent.Error(AppError.Offline), state.content)
+        viewModel().uiState.test {
+            val failed = expectMostRecentItemAfter { !it.isLoading && it.errorMessage != null }
+            assertEquals("You're offline. Connect and try again.", failed.errorMessage)
         }
-    }
-
-    @Test
-    fun `given cached movies and refresh fails, when observing state, then stale movies stay visible`() = runTest {
-        repository.moviesFlow(MovieCategory.POPULAR).value = listOf(movie(1, "Cached"))
-        repository.onRefresh = { Result.failure(AppException(AppError.RateLimited)) }
-        val viewModel = viewModel()
-
-        viewModel.uiState.test {
-            val state = expectMostRecentItemAfter { it.content is MoviesContent.Movies && !it.isRefreshing }
-            val movies = state.content as MoviesContent.Movies
-            assertEquals("Cached", movies.movies.first().title)
-            // Non-blocking signal that the refresh behind the cache failed.
-            assertEquals(AppError.RateLimited, movies.staleError)
-        }
-    }
-
-    @Test
-    fun `given empty cache and refresh succeeds with nothing, when observing state, then content is Empty`() = runTest {
-        val viewModel = viewModel()
-
-        viewModel.uiState.test {
-            val state = expectMostRecentItemAfter { it.content is MoviesContent.Empty }
-            assertEquals(MoviesContent.Empty, state.content)
-        }
-    }
-
-    @Test
-    fun `given a different tab is selected, when its cache populates, then that category's movies render and it is refreshed`() = runTest {
-        seedRefresh(MovieCategory.POPULAR, listOf(movie(1, "Popular")))
-        repository.onRefresh = { c ->
-            repository.moviesFlow(c).value = when (c) {
-                MovieCategory.POPULAR -> listOf(movie(1, "Popular"))
-                MovieCategory.TOP_RATED -> listOf(movie(2, "Top Rated"))
-                MovieCategory.NOW_PLAYING -> listOf(movie(3, "Now Playing"))
-            }
-            Result.success(MoviePage(1, 1))
-        }
-        val viewModel = viewModel()
-
-        viewModel.uiState.test {
-            expectMostRecentItemAfter { it.content is MoviesContent.Movies && it.selectedCategory == MovieCategory.POPULAR }
-
-            viewModel.onCategorySelected(MovieCategory.TOP_RATED)
-
-            val state = expectMostRecentItemAfter {
-                it.selectedCategory == MovieCategory.TOP_RATED && it.content is MoviesContent.Movies
-            }
-            assertEquals("Top Rated", (state.content as MoviesContent.Movies).movies.single().title)
-        }
-        assertTrue(MovieCategory.TOP_RATED in repository.refreshedCategories)
-    }
-
-    @Test
-    fun `given more pages available, when load more requested, then the next page is fetched`() = runTest {
-        repository.onRefresh = { c ->
-            repository.moviesFlow(c).value = listOf(movie(1))
-            Result.success(MoviePage(page = 1, totalPages = 3))
-        }
-        repository.onLoadMore = { c, page ->
-            repository.moviesFlow(c).value = repository.moviesFlow(c).value + movie(page * 10L)
-            Result.success(MoviePage(page = page, totalPages = 3))
-        }
-        val viewModel = viewModel()
-
-        viewModel.uiState.test {
-            val first = expectMostRecentItemAfter {
-                (it.content as? MoviesContent.Movies)?.canLoadMore == true
-            }
-            assertEquals(1, (first.content as MoviesContent.Movies).movies.size)
-
-            viewModel.onLoadMoreRequested()
-
-            val appended = expectMostRecentItemAfter {
-                (it.content as? MoviesContent.Movies)?.movies?.size == 2
-            }
-            assertTrue(appended.content is MoviesContent.Movies)
-        }
-        assertEquals(listOf(MovieCategory.POPULAR to 2), repository.loadMoreCalls)
-    }
-
-    @Test
-    fun `given the last page, when load more requested, then no fetch happens`() = runTest {
-        repository.onRefresh = { c ->
-            repository.moviesFlow(c).value = listOf(movie(1))
-            Result.success(MoviePage(page = 1, totalPages = 1))
-        }
-        val viewModel = viewModel()
-
-        viewModel.uiState.test {
-            expectMostRecentItemAfter { it.content is MoviesContent.Movies && !it.isRefreshing }
-            viewModel.onLoadMoreRequested()
-            expectNoEvents()
-        }
-        assertTrue(repository.loadMoreCalls.isEmpty())
     }
 
     @Test

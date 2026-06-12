@@ -11,6 +11,9 @@ dependencies {
     implementation(project(":core:common"))
     implementation(project(":core:network"))
     implementation(project(":core:database"))
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.paging.runtime)
+    implementation(libs.androidx.room.paging)
 
     testImplementation(project(":core:testing"))
     testImplementation(libs.turbine)

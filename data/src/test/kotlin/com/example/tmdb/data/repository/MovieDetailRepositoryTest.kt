@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.cash.turbine.test
 import com.example.tmdb.core.common.DispatcherProvider
 import com.example.tmdb.core.database.TmdbDatabase
+import com.example.tmdb.core.network.OmdbApi
 import com.example.tmdb.core.network.TmdbApi
 import com.example.tmdb.domain.model.AppError
 import com.example.tmdb.domain.model.MovieId
@@ -48,20 +49,20 @@ class MovieDetailRepositoryTest {
     fun setUp() {
         server = MockWebServer()
         server.start()
-        val api = Retrofit.Builder()
+        val retrofit = Retrofit.Builder()
             .baseUrl(server.url("/"))
             .addConverterFactory(
                 Json { ignoreUnknownKeys = true; coerceInputValues = true }
                     .asConverterFactory("application/json".toMediaType()),
             )
             .build()
-            .create(TmdbApi::class.java)
         db = Room.inMemoryDatabaseBuilder(
             ApplicationProvider.getApplicationContext(),
             TmdbDatabase::class.java,
         ).allowMainThreadQueries().build()
         repository = OfflineFirstMovieRepository(
-            api = api,
+            api = retrofit.create(TmdbApi::class.java),
+            omdbApi = retrofit.create(OmdbApi::class.java),
             dao = db.movieDao(),
             detailDao = db.movieDetailDao(),
             dispatchers = TestDispatchers(UnconfinedTestDispatcher()),

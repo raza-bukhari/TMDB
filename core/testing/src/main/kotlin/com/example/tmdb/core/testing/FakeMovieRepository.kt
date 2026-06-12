@@ -1,14 +1,17 @@
 package com.example.tmdb.core.testing
 
+import androidx.paging.PagingData
+import com.example.tmdb.domain.model.ExternalRatings
+import com.example.tmdb.domain.model.HomeList
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieCategory
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
-import com.example.tmdb.domain.model.MoviePage
-import com.example.tmdb.domain.model.SearchResults
 import com.example.tmdb.domain.repository.MovieRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 
 class FakeMovieRepository : MovieRepository {
 
@@ -20,39 +23,30 @@ class FakeMovieRepository : MovieRepository {
     fun moviesFlow(category: MovieCategory): MutableStateFlow<List<Movie>> =
         categoryFlows.getOrPut(category) { MutableStateFlow(emptyList()) }
 
-    val refreshedCategories = mutableListOf<MovieCategory>()
-    val loadMoreCalls = mutableListOf<Pair<MovieCategory, Int>>()
-
-    /** Programmable refresh; may also seed [moviesFlow] to mimic a real fetch. */
-    var onRefresh: (MovieCategory) -> Result<MoviePage> = { Result.success(MoviePage(page = 1, totalPages = 1)) }
-    var onLoadMore: (MovieCategory, Int) -> Result<MoviePage> =
-        { _, page -> Result.success(MoviePage(page = page, totalPages = page)) }
-
-    override fun observeMovies(category: MovieCategory): Flow<List<Movie>> = moviesFlow(category)
-
-    override suspend fun refreshMovies(category: MovieCategory): Result<MoviePage> {
-        refreshedCategories += category
-        return onRefresh(category)
-    }
-
-    override suspend fun loadMoreMovies(category: MovieCategory, page: Int): Result<MoviePage> {
-        loadMoreCalls += category to page
-        return onLoadMore(category, page)
-    }
+    override fun observeMovies(category: MovieCategory): Flow<PagingData<Movie>> =
+        moviesFlow(category).map { PagingData.from(it) }
 
     // --- search ---
 
-    /** Queue of (query, page) pairs received by [searchMovies], oldest first. */
-    val searchCalls = mutableListOf<Pair<String, Int>>()
+    /** Queue of (query) pairs received by [searchMovies], oldest first. */
+    val searchCalls = mutableListOf<String>()
 
     /** Programmable search behaviour; defaults to one empty page. */
-    var onSearch: (query: String, page: Int) -> Result<SearchResults> = { _, page ->
-        Result.success(SearchResults(movies = emptyList(), page = page, totalPages = page))
+    var onSearch: (query: String) -> List<Movie> = { emptyList() }
+
+    override fun searchMovies(query: String): Flow<PagingData<Movie>> {
+        searchCalls += query
+        return flowOf(PagingData.from(onSearch(query)))
     }
 
-    override suspend fun searchMovies(query: String, page: Int): Result<SearchResults> {
-        searchCalls += query to page
-        return onSearch(query, page)
+    // --- home ---
+
+    val homeListCalls = mutableListOf<HomeList>()
+    var onHomeList: (HomeList) -> Result<List<Movie>> = { Result.success(emptyList()) }
+
+    override suspend fun homeList(list: HomeList): Result<List<Movie>> {
+        homeListCalls += list
+        return onHomeList(list)
     }
 
     // --- detail ---
@@ -76,5 +70,15 @@ class FakeMovieRepository : MovieRepository {
             onDetailRefreshCachePopulation?.let { detailFlow.value = it() }
         }
         return refreshResult
+    }
+
+    // --- external ratings ---
+
+    val externalRatingCalls = mutableListOf<String>()
+    var externalRatingsResult: Result<ExternalRatings> = Result.success(ExternalRatings())
+
+    override suspend fun externalRatings(imdbId: String): Result<ExternalRatings> {
+        externalRatingCalls += imdbId
+        return externalRatingsResult
     }
 }

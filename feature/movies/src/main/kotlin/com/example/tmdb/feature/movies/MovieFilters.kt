@@ -33,6 +33,18 @@ data class MovieFilters(
     val isDefault: Boolean get() = activeCount == 0
 }
 
+internal fun Movie.matches(filters: MovieFilters): Boolean {
+    val yearWindowFull = filters.fromYear <= MIN_FILTER_YEAR && filters.toYear >= MAX_FILTER_YEAR
+    val genreIds = filters.genres.map { it.id }.toSet()
+
+    val ratingOk = voteAverage >= filters.minRating
+    val year = releaseDate?.year
+    val yearOk = if (year == null) yearWindowFull else year in filters.fromYear..filters.toYear
+    val genreOk = genreIds.isEmpty() || this.genreIds.any { it in genreIds }
+
+    return ratingOk && yearOk && genreOk
+}
+
 /** Filters then sorts [movies]; a movie with no release year is kept only when the year window is full. */
 internal fun List<Movie>.applyFilters(filters: MovieFilters): List<Movie> {
     val yearWindowFull = filters.fromYear <= MIN_FILTER_YEAR && filters.toYear >= MAX_FILTER_YEAR

@@ -1,11 +1,13 @@
 package com.example.tmdb.domain.usecase
 
-import com.example.tmdb.domain.model.SearchResults
+import androidx.paging.PagingData
+import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.repository.MovieRepository
+import kotlinx.coroutines.flow.Flow
 
 class SearchMoviesUseCase(
     private val repository: MovieRepository,
 ) {
-    suspend operator fun invoke(query: String, page: Int = 1): Result<SearchResults> =
-        repository.searchMovies(query, page)
+    operator fun invoke(query: String): Flow<PagingData<Movie>> =
+        repository.searchMovies(query)
 }

@@ -6,4 +6,5 @@ dependencies {
     implementation(project(":domain"))
     implementation(libs.junit)
     implementation(libs.kotlinx.coroutines.test)
+    implementation(libs.androidx.paging.common)
 }

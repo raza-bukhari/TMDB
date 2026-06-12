@@ -24,9 +24,21 @@ interface TmdbApi {
         @Query("page") page: Int = 1,
     ): PagedResponseDto<MovieDto>
 
+    @GET("movie/upcoming")
+    suspend fun upcomingMovies(
+        @Query("page") page: Int = 1,
+    ): PagedResponseDto<MovieDto>
+
+    @GET("trending/movie/{time_window}")
+    suspend fun trendingMovies(
+        @Path("time_window") timeWindow: String,
+        @Query("page") page: Int = 1,
+    ): PagedResponseDto<MovieDto>
+
     @GET("movie/{movie_id}")
     suspend fun movieDetail(
         @Path("movie_id") movieId: Long,
+        @Query("append_to_response") appendToResponse: String = "credits,release_dates,similar,watch/providers",
     ): MovieDetailDto
 
     @GET("search/movie")

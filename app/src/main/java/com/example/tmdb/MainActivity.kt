@@ -9,10 +9,14 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -36,6 +40,8 @@ class MainActivity : ComponentActivity() {
             var themeMode by rememberSaveable { mutableStateOf(ThemeMode.SYSTEM) }
 
             TMDBTheme(themeMode = themeMode) {
+              // Themed background fills behind the transparent system bars (edge-to-edge).
+              Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
                 val navController = rememberNavController()
                 NavHost(
                     navController = navController,
@@ -59,7 +65,10 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable<MovieDetailRoute> {
-                        MovieDetailScreen(onBackClick = { navController.popBackStack() })
+                        MovieDetailScreen(
+                            onBackClick = { navController.popBackStack() },
+                            onMovieClick = { movieId -> navController.navigate(MovieDetailRoute(movieId)) }
+                        )
                     }
                     composable<SearchRoute> {
                         SearchScreen(
@@ -68,6 +77,7 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
+              }
             }
         }
     }

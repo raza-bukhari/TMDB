@@ -1,45 +1,37 @@
 package com.example.tmdb.domain
 
+import androidx.paging.PagingData
+import com.example.tmdb.domain.model.ExternalRatings
+import com.example.tmdb.domain.model.HomeList
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieCategory
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
-import com.example.tmdb.domain.model.MoviePage
-import com.example.tmdb.domain.model.SearchResults
 import com.example.tmdb.domain.repository.MovieRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 
 /** Minimal programmable [MovieRepository] for domain use-case tests. */
 class FakeRepo : MovieRepository {
     val movies = MutableStateFlow<List<Movie>>(emptyList())
     val detail = MutableStateFlow<MovieDetail?>(null)
 
-    var refreshResult: Result<MoviePage> = Result.success(MoviePage(1, 1))
-    var loadMoreResult: Result<MoviePage> = Result.success(MoviePage(2, 2))
     var detailResult: Result<Unit> = Result.success(Unit)
-    var searchResult: (String, Int) -> Result<SearchResults> = { _, page ->
-        Result.success(SearchResults(emptyList(), page, page))
-    }
+    var homeResult: Result<List<Movie>> = Result.success(emptyList())
+    var externalRatingsResult: Result<ExternalRatings> = Result.success(ExternalRatings())
+    var onSearch: (String) -> List<Movie> = { emptyList() }
 
     var lastCategory: MovieCategory? = null
-    var lastLoadMore: Pair<MovieCategory, Int>? = null
     var lastDetailId: MovieId? = null
-    var lastSearch: Pair<String, Int>? = null
+    var lastSearch: String? = null
+    var lastHomeList: HomeList? = null
+    var lastImdbId: String? = null
 
-    override fun observeMovies(category: MovieCategory): Flow<List<Movie>> {
+    override fun observeMovies(category: MovieCategory): Flow<PagingData<Movie>> {
         lastCategory = category
-        return movies
-    }
-
-    override suspend fun refreshMovies(category: MovieCategory): Result<MoviePage> {
-        lastCategory = category
-        return refreshResult
-    }
-
-    override suspend fun loadMoreMovies(category: MovieCategory, page: Int): Result<MoviePage> {
-        lastLoadMore = category to page
-        return loadMoreResult
+        return movies.map { PagingData.from(it) }
     }
 
     override fun observeMovieDetail(id: MovieId): Flow<MovieDetail?> {
@@ -52,8 +44,18 @@ class FakeRepo : MovieRepository {
         return detailResult
     }
 
-    override suspend fun searchMovies(query: String, page: Int): Result<SearchResults> {
-        lastSearch = query to page
-        return searchResult(query, page)
+    override fun searchMovies(query: String): Flow<PagingData<Movie>> {
+        lastSearch = query
+        return flowOf(PagingData.from(onSearch(query)))
+    }
+
+    override suspend fun homeList(list: HomeList): Result<List<Movie>> {
+        lastHomeList = list
+        return homeResult
+    }
+
+    override suspend fun externalRatings(imdbId: String): Result<ExternalRatings> {
+        lastImdbId = imdbId
+        return externalRatingsResult
     }
 }

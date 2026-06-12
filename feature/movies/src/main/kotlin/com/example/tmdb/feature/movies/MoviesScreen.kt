@@ -1,74 +1,72 @@
 package com.example.tmdb.feature.movies
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.example.tmdb.core.designsystem.ThemePreviews
-import com.example.tmdb.core.designsystem.component.EmptyState
 import com.example.tmdb.core.designsystem.component.ErrorState
-import com.example.tmdb.core.designsystem.component.LoadingState
 import com.example.tmdb.core.designsystem.component.PosterCard
 import com.example.tmdb.core.designsystem.theme.TMDBTheme
 import com.example.tmdb.core.designsystem.theme.ThemeMode
-import com.example.tmdb.domain.model.AppError
-import com.example.tmdb.domain.model.MovieCategory
 import kotlinx.collections.immutable.persistentListOf
 import org.koin.androidx.compose.koinViewModel
 
 object MoviesTestTags {
-    const val GRID = "movies_grid"
+    const val HOME = "movies_home"
     const val SEARCH = "movies_search_button"
-    const val FILTER = "movies_filter_button"
     const val THEME = "movies_theme_button"
-    const val APPEND_SPINNER = "movies_append_spinner"
-    const val STALE_BANNER = "movies_stale_banner"
+    const val TRENDING_TODAY = "movies_trending_today"
+    const val TRENDING_WEEK = "movies_trending_week"
+    const val REFRESHING = "movies_refreshing"
     fun movieCard(id: Long) = "movie_card_$id"
-    fun tab(category: MovieCategory) = "movies_tab_${category.name}"
 }
-
-/** Request the next page this many items before the end of the grid. */
-private const val LOAD_MORE_LOOKAHEAD = 6
 
 @Composable
 fun MoviesScreen(
@@ -93,100 +91,196 @@ fun MoviesScreen(
         state = state,
         themeMode = themeMode,
         onToggleTheme = onToggleTheme,
-        onCategorySelected = viewModel::onCategorySelected,
+        onTrendingWindowSelected = viewModel::onTrendingWindowSelected,
         onRetryClick = viewModel::onRetryClicked,
         onRefresh = viewModel::onRefresh,
         onMovieClick = viewModel::onMovieClicked,
-        onLoadMoreRequested = viewModel::onLoadMoreRequested,
-        onFiltersChanged = viewModel::onFiltersChanged,
-        onFiltersReset = viewModel::onFiltersReset,
         onSearchClick = onSearchClick,
         modifier = modifier,
     )
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 internal fun MoviesScreenContent(
     state: MoviesUiState,
     themeMode: ThemeMode,
     onToggleTheme: () -> Unit,
-    onCategorySelected: (MovieCategory) -> Unit,
+    onTrendingWindowSelected: (TrendingWindow) -> Unit,
     onRetryClick: () -> Unit,
     onRefresh: () -> Unit,
     onMovieClick: (Long) -> Unit,
-    onLoadMoreRequested: () -> Unit,
-    onFiltersChanged: (MovieFilters) -> Unit,
-    onFiltersReset: () -> Unit,
     onSearchClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var showFilters by remember { mutableStateOf(false) }
+    Surface(modifier = modifier.fillMaxSize()) {
+        when {
+            state.isLoading -> LoadingHome()
+            state.errorMessage != null && state.sections.isEmpty() -> {
+                ErrorState(message = state.errorMessage, onRetryClick = onRetryClick)
+            }
+            else -> {
+                PullToRefreshBox(
+                    isRefreshing = state.isRefreshing,
+                    onRefresh = onRefresh,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    HomeFeed(
+                        state = state,
+                        themeMode = themeMode,
+                        onToggleTheme = onToggleTheme,
+                        onTrendingWindowSelected = onTrendingWindowSelected,
+                        onMovieClick = onMovieClick,
+                        onSearchClick = onSearchClick,
+                    )
+                }
+            }
+        }
+    }
+}
 
-    Column(
-        modifier = modifier
+@Composable
+private fun LoadingHome() {
+    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun HomeFeed(
+    state: MoviesUiState,
+    themeMode: ThemeMode,
+    onToggleTheme: () -> Unit,
+    onTrendingWindowSelected: (TrendingWindow) -> Unit,
+    onMovieClick: (Long) -> Unit,
+    onSearchClick: () -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding(),
+            .testTag(MoviesTestTags.HOME),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
-        TopBar(
-            themeMode = themeMode,
-            activeFilterCount = state.filters.activeCount,
-            onToggleTheme = onToggleTheme,
-            onFilterClick = { showFilters = true },
-            onSearchClick = onSearchClick,
-        )
+        item {
+            Hero(
+                movie = state.hero,
+                themeMode = themeMode,
+                onToggleTheme = onToggleTheme,
+                onSearchClick = onSearchClick,
+                onMovieClick = onMovieClick,
+            )
+        }
 
-        ScrollableTabRow(
-            selectedTabIndex = state.selectedCategory.ordinal,
-            edgePadding = 12.dp,
-        ) {
-            MovieCategory.entries.forEach { category ->
-                Tab(
-                    selected = category == state.selectedCategory,
-                    onClick = { onCategorySelected(category) },
-                    text = { Text(category.label()) },
-                    modifier = Modifier.testTag(MoviesTestTags.tab(category)),
-                )
+        state.errorMessage?.let { message ->
+            item {
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Text(
+                        text = "$message Showing the latest loaded movies.",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(12.dp),
+                    )
+                }
             }
         }
 
-        MoviesBody(
-            content = state.content,
-            isRefreshing = state.isRefreshing,
-            onRetryClick = onRetryClick,
-            onRefresh = onRefresh,
-            onMovieClick = onMovieClick,
-            onLoadMoreRequested = onLoadMoreRequested,
-        )
-    }
+        items(
+            items = state.sections,
+            key = { it.list.name },
+        ) { section ->
+            MovieSection(
+                section = section,
+                trendingWindow = state.trendingWindow,
+                onTrendingWindowSelected = onTrendingWindowSelected,
+                onMovieClick = onMovieClick,
+            )
+        }
 
-    if (showFilters) {
-        FilterSheet(
-            filters = state.filters,
-            onFiltersChanged = onFiltersChanged,
-            onReset = onFiltersReset,
-            onDismiss = { showFilters = false },
+        item {
+            Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
+        }
+    }
+}
+
+@Composable
+private fun Hero(
+    movie: MovieListItem?,
+    themeMode: ThemeMode,
+    onToggleTheme: () -> Unit,
+    onSearchClick: () -> Unit,
+    onMovieClick: (Long) -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(360.dp),
+    ) {
+        AsyncImage(
+            model = movie?.backdropUrl ?: movie?.posterUrl,
+            contentDescription = movie?.title,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxSize()
+                .drawWithContent {
+                    drawContent()
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            0f to Color.Black.copy(alpha = 0.25f),
+                            0.68f to Color.Black.copy(alpha = 0.62f),
+                            1f to Color.Black.copy(alpha = 0.88f),
+                        ),
+                    )
+                },
         )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        ) {
+            TopBar(themeMode = themeMode, onToggleTheme = onToggleTheme, onSearchClick = onSearchClick)
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = "Welcome.",
+                style = MaterialTheme.typography.displaySmall,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = "Millions of movies to discover. Explore now.",
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White.copy(alpha = 0.9f),
+            )
+            Spacer(Modifier.height(18.dp))
+            SearchPill(onSearchClick)
+            movie?.let {
+                Spacer(Modifier.height(18.dp))
+                FeaturedMovie(movie = it, onMovieClick = onMovieClick)
+            }
+        }
     }
 }
 
 @Composable
 private fun TopBar(
     themeMode: ThemeMode,
-    activeFilterCount: Int,
     onToggleTheme: () -> Unit,
-    onFilterClick: () -> Unit,
     onSearchClick: () -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp, end = 4.dp),
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Text(
             text = "TMDB",
             style = MaterialTheme.typography.titleLarge,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f),
         )
         TextButton(
@@ -199,232 +293,212 @@ private fun TopBar(
                     ThemeMode.LIGHT -> "Light"
                     ThemeMode.DARK -> "Dark"
                 },
+                color = Color.White,
             )
-        }
-        // Core icon set has no "tune"/"filter" glyph, so a labelled button reads clearest.
-        TextButton(
-            onClick = onFilterClick,
-            modifier = Modifier.testTag(MoviesTestTags.FILTER),
-        ) {
-            Text(if (activeFilterCount > 0) "Filter ($activeFilterCount)" else "Filter")
         }
         IconButton(
             onClick = onSearchClick,
             modifier = Modifier.testTag(MoviesTestTags.SEARCH),
         ) {
-            Icon(Icons.Filled.Search, contentDescription = "Search movies")
+            Icon(Icons.Filled.Search, contentDescription = "Search movies", tint = Color.White)
         }
     }
 }
 
 @Composable
-private fun MoviesBody(
-    content: MoviesContent,
-    isRefreshing: Boolean,
-    onRetryClick: () -> Unit,
-    onRefresh: () -> Unit,
-    onMovieClick: (Long) -> Unit,
-    onLoadMoreRequested: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    // Crossfade+slight slide between the content states so transitions don't snap.
-    AnimatedContent(
-        targetState = content,
-        transitionSpec = { fadeIn() togetherWith fadeOut() },
-        contentKey = { it::class },
-        label = "movies-content",
-        modifier = modifier.fillMaxSize(),
-    ) { target ->
-        when (target) {
-            is MoviesContent.Movies -> RefreshableGrid(
-                content = target,
-                isRefreshing = isRefreshing,
-                onRefresh = onRefresh,
-                onMovieClick = onMovieClick,
-                onLoadMoreRequested = onLoadMoreRequested,
-            )
-            MoviesContent.Loading -> Box(Modifier.fillMaxSize()) { LoadingState() }
-            MoviesContent.Empty -> Box(Modifier.fillMaxSize()) {
-                EmptyState(message = "No movies right now. Check back later.")
-            }
-            MoviesContent.NoMatches -> Box(Modifier.fillMaxSize()) {
-                EmptyState(message = "No movies match your filters.")
-            }
-            is MoviesContent.Error -> Box(Modifier.fillMaxSize()) {
-                ErrorState(message = target.error.toUserMessage(), onRetryClick = onRetryClick)
-            }
-        }
-    }
-}
-
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
-@Composable
-private fun RefreshableGrid(
-    content: MoviesContent.Movies,
-    isRefreshing: Boolean,
-    onRefresh: () -> Unit,
-    onMovieClick: (Long) -> Unit,
-    onLoadMoreRequested: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    PullToRefreshBox(
-        isRefreshing = isRefreshing,
-        onRefresh = onRefresh,
-        modifier = modifier.fillMaxSize(),
-    ) {
-        Column(Modifier.fillMaxSize()) {
-            AnimatedVisibility(visible = content.staleError != null) {
-                content.staleError?.let { StaleBanner(it) }
-            }
-            MoviesGrid(
-                content = content,
-                onMovieClick = onMovieClick,
-                onLoadMoreRequested = onLoadMoreRequested,
-            )
-        }
-    }
-}
-
-@Composable
-private fun MoviesGrid(
-    content: MoviesContent.Movies,
-    onMovieClick: (Long) -> Unit,
-    onLoadMoreRequested: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val gridState = rememberLazyGridState()
-    val nearEnd by remember(gridState) {
-        derivedStateOf {
-            val info = gridState.layoutInfo
-            val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: 0
-            lastVisible >= info.totalItemsCount - LOAD_MORE_LOOKAHEAD
-        }
-    }
-    LaunchedEffect(nearEnd, content.canLoadMore, content.isAppending) {
-        if (nearEnd && content.canLoadMore && !content.isAppending) onLoadMoreRequested()
-    }
-
-    LazyVerticalGrid(
-        state = gridState,
-        columns = GridCells.Adaptive(minSize = 120.dp),
-        // navigationBars inset so the last row clears the gesture/nav bar (edge-to-edge).
-        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 24.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = modifier
-            .fillMaxSize()
-            .testTag(MoviesTestTags.GRID),
-    ) {
-        items(
-            items = content.movies,
-            key = { it.id },
-            contentType = { "movie" },
-        ) { movie ->
-            PosterCard(
-                title = movie.title,
-                rating = movie.rating,
-                subtitle = movie.releaseYear,
-                onClick = { onMovieClick(movie.id) },
-                // Animate position when sort reorders the grid.
-                modifier = Modifier
-                    .animateItem()
-                    .testTag(MoviesTestTags.movieCard(movie.id)),
-            ) {
-                AsyncImage(
-                    model = movie.posterUrl,
-                    contentDescription = movie.title,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-        }
-        if (content.isAppending) {
-            item(span = { GridItemSpan(maxLineSpan) }, contentType = "spinner") {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .testTag(MoviesTestTags.APPEND_SPINNER),
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun StaleBanner(error: AppError, modifier: Modifier = Modifier) {
+private fun SearchPill(onSearchClick: () -> Unit) {
     Surface(
-        color = MaterialTheme.colorScheme.errorContainer,
-        contentColor = MaterialTheme.colorScheme.onErrorContainer,
-        modifier = modifier
+        color = Color.White,
+        contentColor = Color.Black,
+        shape = RoundedCornerShape(28.dp),
+        modifier = Modifier
             .fillMaxWidth()
-            .testTag(MoviesTestTags.STALE_BANNER),
+            .clickable(onClick = onSearchClick),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 18.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+        ) {
+            Text(
+                text = "Search for a movie",
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.Black.copy(alpha = 0.62f),
+                modifier = Modifier.weight(1f),
+            )
+            Button(onClick = onSearchClick, shape = RoundedCornerShape(24.dp)) {
+                Text("Search")
+            }
+        }
+    }
+}
+
+@Composable
+private fun FeaturedMovie(movie: MovieListItem, onMovieClick: (Long) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onMovieClick(movie.id) },
     ) {
         Text(
-            text = "${error.toUserMessage()} Showing saved movies.",
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            text = movie.title,
+            style = MaterialTheme.typography.titleLarge,
+            color = Color.White,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = movie.overview,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White.copy(alpha = 0.78f),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
 
-internal fun AppError.toUserMessage(): String = when (this) {
-    AppError.Offline -> "You're offline. Connect and try again."
-    AppError.InvalidToken -> "TMDB rejected the API token. Check your local.properties."
-    AppError.NotFound -> "Couldn't find what you were looking for."
-    AppError.RateLimited -> "Too many requests. Give it a moment and retry."
-    is AppError.Unknown -> "Something went wrong. Please try again."
+@Composable
+private fun MovieSection(
+    section: HomeSectionUi,
+    trendingWindow: TrendingWindow,
+    onTrendingWindowSelected: (TrendingWindow) -> Unit,
+    onMovieClick: (Long) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = section.title, style = MaterialTheme.typography.titleLarge)
+                Text(
+                    text = section.subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (section.list == trendingWindow.toHomeList()) {
+                TrendingToggle(
+                    selected = trendingWindow,
+                    onSelected = onTrendingWindowSelected,
+                )
+            }
+        }
+
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            items(section.movies, key = { it.id }) { movie ->
+                HomeMovieCard(movie = movie, onMovieClick = onMovieClick)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TrendingToggle(
+    selected: TrendingWindow,
+    onSelected: (TrendingWindow) -> Unit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(18.dp),
+    ) {
+        Row(Modifier.padding(2.dp)) {
+            TrendingToggleItem(
+                text = "Today",
+                selected = selected == TrendingWindow.TODAY,
+                onClick = { onSelected(TrendingWindow.TODAY) },
+                modifier = Modifier.testTag(MoviesTestTags.TRENDING_TODAY),
+            )
+            TrendingToggleItem(
+                text = "Week",
+                selected = selected == TrendingWindow.THIS_WEEK,
+                onClick = { onSelected(TrendingWindow.THIS_WEEK) },
+                modifier = Modifier.testTag(MoviesTestTags.TRENDING_WEEK),
+            )
+        }
+    }
+}
+
+@Composable
+private fun TrendingToggleItem(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        color = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
+        contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        shape = RoundedCornerShape(16.dp),
+        modifier = modifier.clickable(onClick = onClick),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+        )
+    }
+}
+
+@Composable
+private fun HomeMovieCard(movie: MovieListItem, onMovieClick: (Long) -> Unit) {
+    PosterCard(
+        title = movie.title,
+        rating = movie.rating,
+        subtitle = movie.releaseYear ?: "${movie.voteCount} votes",
+        onClick = { onMovieClick(movie.id) },
+        modifier = Modifier
+            .width(132.dp)
+            .testTag(MoviesTestTags.movieCard(movie.id)),
+    ) {
+        AsyncImage(
+            model = movie.posterUrl,
+            contentDescription = movie.title,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+        )
+    }
 }
 
 @ThemePreviews
 @Composable
-private fun MoviesScreenContentPreview() {
-    TMDBTheme(themeMode = ThemeMode.SYSTEM) {
+private fun MoviesHomePreview() {
+    TMDBTheme {
         MoviesScreenContent(
             state = MoviesUiState(
-                selectedCategory = MovieCategory.TOP_RATED,
-                filters = MovieFilters(sort = MovieSort.RATING_DESC),
-                content = MoviesContent.Movies(
-                    persistentListOf(
-                        MovieListItem(1, "Fight Club", null, 8.4, "1999"),
-                        MovieListItem(2, "The Matrix", null, 8.2, "1999"),
+                isLoading = false,
+                hero = previewMovie,
+                sections = persistentListOf(
+                    HomeSectionUi(
+                        list = TrendingWindow.TODAY.toHomeList(),
+                        title = "Trending",
+                        subtitle = "Movies people are watching today",
+                        movies = persistentListOf(previewMovie, previewMovie.copy(id = 551, title = "The Creator")),
                     ),
-                    isAppending = true,
-                    canLoadMore = true,
                 ),
             ),
             themeMode = ThemeMode.SYSTEM,
             onToggleTheme = {},
-            onCategorySelected = {},
+            onTrendingWindowSelected = {},
             onRetryClick = {},
             onRefresh = {},
             onMovieClick = {},
-            onLoadMoreRequested = {},
-            onFiltersChanged = {},
-            onFiltersReset = {},
             onSearchClick = {},
         )
     }
 }
 
-@ThemePreviews
-@Composable
-private fun MoviesScreenErrorPreview() {
-    TMDBTheme(themeMode = ThemeMode.DARK) {
-        MoviesScreenContent(
-            state = MoviesUiState(content = MoviesContent.Error(AppError.Offline)),
-            themeMode = ThemeMode.DARK,
-            onToggleTheme = {},
-            onCategorySelected = {},
-            onRetryClick = {},
-            onRefresh = {},
-            onMovieClick = {},
-            onLoadMoreRequested = {},
-            onFiltersChanged = {},
-            onFiltersReset = {},
-            onSearchClick = {},
-        )
-    }
-}
+private val previewMovie = MovieListItem(
+    id = 550,
+    title = "Fight Club",
+    overview = "An insomniac and a soap maker channel primal aggression into an underground club.",
+    posterUrl = null,
+    backdropUrl = null,
+    rating = 8.4,
+    voteCount = 26280,
+    releaseYear = "1999",
+)

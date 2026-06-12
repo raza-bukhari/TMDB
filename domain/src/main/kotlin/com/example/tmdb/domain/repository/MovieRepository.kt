@@ -1,11 +1,12 @@
 package com.example.tmdb.domain.repository
 
+import androidx.paging.PagingData
+import com.example.tmdb.domain.model.ExternalRatings
+import com.example.tmdb.domain.model.HomeList
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieCategory
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
-import com.example.tmdb.domain.model.MoviePage
-import com.example.tmdb.domain.model.SearchResults
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -14,19 +15,19 @@ import kotlinx.coroutines.flow.Flow
  * refresh* failures carry an [com.example.tmdb.domain.model.AppException].
  */
 interface MovieRepository {
-    fun observeMovies(category: MovieCategory): Flow<List<Movie>>
-
-    /** Fetches page 1 and replaces the category cache; returns the new paging bounds. */
-    suspend fun refreshMovies(category: MovieCategory): Result<MoviePage>
-
-    /** Fetches [page] and appends it to the category cache; returns the new paging bounds. */
-    suspend fun loadMoreMovies(category: MovieCategory, page: Int): Result<MoviePage>
+    fun observeMovies(category: MovieCategory): Flow<PagingData<Movie>>
 
     /** Emits `null` while the movie has never been cached. */
     fun observeMovieDetail(id: MovieId): Flow<MovieDetail?>
 
     suspend fun refreshMovieDetail(id: MovieId): Result<Unit>
 
-    /** Network-only (D-006); results are never cached. */
-    suspend fun searchMovies(query: String, page: Int = 1): Result<SearchResults>
+    /** Network-only (D-006). */
+    fun searchMovies(query: String): Flow<PagingData<Movie>>
+
+    /** One page of a curated front-page list; network-only, carousels don't paginate. */
+    suspend fun homeList(list: HomeList): Result<List<Movie>>
+
+    /** IMDb/RT/Metacritic scores via OMDb; empty success when no OMDb key is configured. */
+    suspend fun externalRatings(imdbId: String): Result<ExternalRatings>
 }

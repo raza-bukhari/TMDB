@@ -17,4 +17,10 @@ data class MovieDetailEntity(
     val voteCount: Int,
     /** Pipe-joined genre names; a converter would be machinery for one read site. */
     val genres: String,
+    val castJson: String? = null,
+    val crewJson: String? = null,
+    val similarMoviesJson: String? = null,
+    val providersJson: String? = null,
+    val certification: String? = null,
+    val imdbId: String? = null,
 )

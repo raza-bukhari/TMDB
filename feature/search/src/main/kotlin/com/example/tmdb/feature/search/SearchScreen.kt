@@ -1,5 +1,6 @@
 package com.example.tmdb.feature.search
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -7,50 +8,53 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import com.example.tmdb.core.designsystem.ThemePreviews
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemContentType
+import androidx.paging.compose.itemKey
 import coil3.compose.AsyncImage
 import com.example.tmdb.core.designsystem.component.EmptyState
 import com.example.tmdb.core.designsystem.component.ErrorState
 import com.example.tmdb.core.designsystem.component.LoadingState
-import com.example.tmdb.core.designsystem.component.PosterCard
-import com.example.tmdb.core.designsystem.theme.TMDBTheme
+import com.example.tmdb.core.designsystem.component.RatingBadge
 import com.example.tmdb.domain.model.AppError
-import kotlinx.collections.immutable.persistentListOf
+import com.example.tmdb.domain.model.asAppError
 import org.koin.androidx.compose.koinViewModel
 
 object SearchTestTags {
-    const val INPUT = "search_input"
-    const val GRID = "search_grid"
+    const val FIELD = "search_field"
     const val BACK = "search_back"
+    const val CLEAR = "search_clear"
+    const val LIST = "search_list"
     const val APPEND_SPINNER = "search_append_spinner"
+    fun resultItem(id: Long) = "search_result_$id"
 }
-
-/** Start asking for the next page this many items before the end of the grid. */
-private const val LOAD_MORE_LOOKAHEAD = 6
 
 @Composable
 fun SearchScreen(
@@ -60,14 +64,15 @@ fun SearchScreen(
 ) {
     val viewModel: SearchViewModel = koinViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val pagingItems = viewModel.pagingData.collectAsLazyPagingItems()
 
     SearchScreenContent(
         state = state,
-        onQueryChanged = viewModel::onQueryChanged,
-        onRetryClick = viewModel::onRetryClicked,
-        onLoadMoreRequested = viewModel::onLoadMoreRequested,
-        onMovieClick = onMovieClick,
+        pagingItems = pagingItems,
         onBackClick = onBackClick,
+        onQueryChanged = viewModel::onQueryChanged,
+        onMovieClick = onMovieClick,
+        onRetryClick = { pagingItems.retry() },
         modifier = modifier,
     )
 }
@@ -75,108 +80,127 @@ fun SearchScreen(
 @Composable
 internal fun SearchScreenContent(
     state: SearchUiState,
-    onQueryChanged: (String) -> Unit,
-    onRetryClick: () -> Unit,
-    onLoadMoreRequested: () -> Unit,
-    onMovieClick: (Long) -> Unit,
+    pagingItems: LazyPagingItems<SearchResultItem>,
     onBackClick: () -> Unit,
+    onQueryChanged: (String) -> Unit,
+    onMovieClick: (Long) -> Unit,
+    onRetryClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .statusBarsPadding(),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 8.dp),
-        ) {
-            IconButton(
-                onClick = onBackClick,
-                modifier = Modifier.testTag(SearchTestTags.BACK),
-            ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-            }
-            OutlinedTextField(
-                value = state.query,
-                onValueChange = onQueryChanged,
-                placeholder = { Text("Search movies…") },
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(end = 12.dp)
-                    .testTag(SearchTestTags.INPUT),
+    Surface(modifier = modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
+            SearchBar(
+                query = state.query,
+                onQueryChanged = onQueryChanged,
+                onBackClick = onBackClick,
             )
-        }
 
-        Box(modifier = Modifier.fillMaxSize()) {
-            when (val content = state.content) {
-                SearchContent.Idle -> EmptyState(message = "Search TMDB by movie title.")
-                SearchContent.Loading -> LoadingState()
-                SearchContent.NoResults -> EmptyState(message = "No movies match that search.")
-                is SearchContent.Error -> ErrorState(
-                    message = content.error.toUserMessage(),
-                    onRetryClick = onRetryClick,
-                )
-                is SearchContent.Results -> ResultsGrid(
-                    content = content,
-                    onMovieClick = onMovieClick,
-                    onLoadMoreRequested = onLoadMoreRequested,
-                )
-            }
+            SearchBody(
+                query = state.query,
+                pagingItems = pagingItems,
+                onMovieClick = onMovieClick,
+                onRetryClick = onRetryClick,
+            )
         }
     }
 }
 
 @Composable
-private fun ResultsGrid(
-    content: SearchContent.Results,
-    onMovieClick: (Long) -> Unit,
-    onLoadMoreRequested: () -> Unit,
-    modifier: Modifier = Modifier,
+private fun SearchBar(
+    query: String,
+    onQueryChanged: (String) -> Unit,
+    onBackClick: () -> Unit,
 ) {
-    val gridState = rememberLazyGridState()
-    val nearEnd by remember(gridState) {
-        derivedStateOf {
-            val info = gridState.layoutInfo
-            val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: 0
-            lastVisible >= info.totalItemsCount - LOAD_MORE_LOOKAHEAD
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(8.dp),
+    ) {
+        IconButton(onClick = onBackClick, modifier = Modifier.testTag(SearchTestTags.BACK)) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
         }
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChanged,
+            placeholder = { Text("Search movies...") },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            trailingIcon = {
+                if (query.isNotEmpty()) {
+                    IconButton(
+                        onClick = { onQueryChanged("") },
+                        modifier = Modifier.testTag(SearchTestTags.CLEAR),
+                    ) {
+                        Icon(Icons.Default.Clear, contentDescription = "Clear search")
+                    }
+                }
+            },
+            singleLine = true,
+            modifier = Modifier.weight(1f).testTag(SearchTestTags.FIELD),
+        )
     }
-    LaunchedEffect(nearEnd, content.canLoadMore, content.isAppending) {
-        if (nearEnd && content.canLoadMore && !content.isAppending) onLoadMoreRequested()
+}
+
+@Composable
+private fun SearchBody(
+    query: String,
+    pagingItems: LazyPagingItems<SearchResultItem>,
+    onMovieClick: (Long) -> Unit,
+    onRetryClick: () -> Unit,
+) {
+    if (query.isBlank()) {
+        EmptyState(message = "Start typing to search movies.")
+        return
     }
 
-    LazyVerticalGrid(
-        state = gridState,
-        columns = GridCells.Adaptive(minSize = 120.dp),
-        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 24.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = modifier.testTag(SearchTestTags.GRID),
+    val refreshLoadState = pagingItems.loadState.refresh
+
+    when {
+        refreshLoadState is LoadState.Loading && pagingItems.itemCount == 0 -> {
+            LoadingState()
+        }
+        refreshLoadState is LoadState.Error && pagingItems.itemCount == 0 -> {
+            ErrorState(
+                message = refreshLoadState.error.asAppError().toUserMessage(),
+                onRetryClick = onRetryClick
+            )
+        }
+        pagingItems.itemCount == 0 && refreshLoadState is LoadState.NotLoading -> {
+            EmptyState(message = "No results found for \"$query\".")
+        }
+        else -> {
+            SearchList(
+                pagingItems = pagingItems,
+                onMovieClick = onMovieClick,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SearchList(
+    pagingItems: LazyPagingItems<SearchResultItem>,
+    onMovieClick: (Long) -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().testTag(SearchTestTags.LIST),
+        contentPadding = PaddingValues(bottom = 16.dp),
     ) {
         items(
-            items = content.movies,
-            key = { it.id },
-            contentType = { "movie" },
-        ) { movie ->
-            PosterCard(
-                title = movie.title,
-                rating = movie.rating,
-                onClick = { onMovieClick(movie.id) },
-                modifier = Modifier.animateItem(),
-            ) {
-                AsyncImage(
-                    model = movie.posterUrl,
-                    contentDescription = movie.title,
-                    modifier = Modifier.fillMaxSize(),
+            count = pagingItems.itemCount,
+            key = pagingItems.itemKey { it.id },
+            contentType = pagingItems.itemContentType { "movie" }
+        ) { index ->
+            pagingItems[index]?.let { item ->
+                SearchResultRow(
+                    item = item,
+                    onClick = { onMovieClick(item.id) },
+                    modifier = Modifier.testTag(SearchTestTags.resultItem(item.id)),
                 )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             }
         }
-        if (content.isAppending) {
-            item(span = { GridItemSpan(maxLineSpan) }, contentType = "spinner") {
+
+        if (pagingItems.loadState.append is LoadState.Loading) {
+            item {
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
@@ -191,50 +215,41 @@ private fun ResultsGrid(
     }
 }
 
-internal fun AppError.toUserMessage(): String = when (this) {
+@Composable
+private fun SearchResultRow(
+    item: SearchResultItem,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        AsyncImage(
+            model = item.posterUrl,
+            contentDescription = null,
+            modifier = Modifier.height(100.dp).padding(vertical = 4.dp),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = item.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            RatingBadge(rating = item.rating, modifier = Modifier.padding(top = 4.dp))
+        }
+    }
+}
+
+private fun AppError.toUserMessage(): String = when (this) {
     AppError.Offline -> "You're offline. Connect and try again."
-    AppError.InvalidToken -> "TMDB rejected the API token. Check your local.properties."
-    AppError.NotFound -> "Couldn't find what you were looking for."
-    AppError.RateLimited -> "Too many requests. Give it a moment and retry."
-    is AppError.Unknown -> "Something went wrong. Please try again."
-}
-
-@ThemePreviews
-@Composable
-private fun SearchResultsPreview() {
-    TMDBTheme {
-        SearchScreenContent(
-            state = SearchUiState(
-                query = "incep",
-                content = SearchContent.Results(
-                    movies = persistentListOf(
-                        SearchResultItem(27205, "Inception", null, 8.4),
-                        SearchResultItem(504253, "Inception: The Cobol Job", null, 7.3),
-                    ),
-                    isAppending = true,
-                    canLoadMore = true,
-                ),
-            ),
-            onQueryChanged = {},
-            onRetryClick = {},
-            onLoadMoreRequested = {},
-            onMovieClick = {},
-            onBackClick = {},
-        )
-    }
-}
-
-@ThemePreviews
-@Composable
-private fun SearchIdlePreview() {
-    TMDBTheme {
-        SearchScreenContent(
-            state = SearchUiState(),
-            onQueryChanged = {},
-            onRetryClick = {},
-            onLoadMoreRequested = {},
-            onMovieClick = {},
-            onBackClick = {},
-        )
-    }
+    AppError.InvalidToken -> "TMDB rejected the API token."
+    AppError.NotFound -> "Resource not found."
+    AppError.RateLimited -> "Too many requests. Please wait."
+    is AppError.Unknown -> "Something went wrong."
 }

@@ -15,6 +15,7 @@ data class MovieDetailDto(
     @SerialName("title") val title: String = "",
     @SerialName("overview") val overview: String = "",
     @SerialName("tagline") val tagline: String? = null,
+    @SerialName("imdb_id") val imdbId: String? = null,
     @SerialName("poster_path") val posterPath: String? = null,
     @SerialName("backdrop_path") val backdropPath: String? = null,
     @SerialName("release_date") val releaseDate: String? = null,
@@ -22,4 +23,8 @@ data class MovieDetailDto(
     @SerialName("vote_average") val voteAverage: Double = 0.0,
     @SerialName("vote_count") val voteCount: Int = 0,
     @SerialName("genres") val genres: List<GenreDto> = emptyList(),
+    @SerialName("credits") val credits: CreditsDto? = null,
+    @SerialName("release_dates") val releaseDates: ReleaseDatesResponseDto? = null,
+    @SerialName("similar") val similar: PagedResponseDto<MovieDto>? = null,
+    @SerialName("watch/providers") val watchProviders: WatchProvidersResponseDto? = null,
 )

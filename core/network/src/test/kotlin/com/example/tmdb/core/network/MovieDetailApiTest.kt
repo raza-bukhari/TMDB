@@ -51,7 +51,7 @@ class MovieDetailApiTest {
         assertEquals("Mischief. Mayhem. Soap.", detail.tagline)
         assertEquals(139, detail.runtime)
         assertEquals(listOf("Drama", "Thriller", "Comedy"), detail.genres.map { it.name })
-        assertEquals("/movie/550", server.takeRequest().target)
+        assertEquals("/movie/550?append_to_response=credits%2Crelease_dates%2Csimilar%2Cwatch%2Fproviders", server.takeRequest().target)
     }
 
     @Test

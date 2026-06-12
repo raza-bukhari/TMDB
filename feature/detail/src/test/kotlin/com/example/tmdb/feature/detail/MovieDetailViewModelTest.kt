@@ -6,8 +6,10 @@ import com.example.tmdb.core.testing.FakeMovieRepository
 import com.example.tmdb.core.testing.MainDispatcherRule
 import com.example.tmdb.domain.model.AppError
 import com.example.tmdb.domain.model.AppException
+import com.example.tmdb.domain.model.ExternalRatings
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
+import com.example.tmdb.domain.usecase.GetExternalRatingsUseCase
 import com.example.tmdb.domain.usecase.ObserveMovieDetailUseCase
 import com.example.tmdb.domain.usecase.RefreshMovieDetailUseCase
 import kotlinx.coroutines.test.runTest
@@ -38,12 +40,14 @@ class MovieDetailViewModelTest {
         voteAverage = 8.4,
         voteCount = 26280,
         genres = listOf("Drama"),
+        imdbId = "tt0137523",
     )
 
     private fun viewModel() = MovieDetailViewModel(
         savedStateHandle = SavedStateHandle(mapOf("movieId" to 550L)),
         observeMovieDetail = ObserveMovieDetailUseCase(repository),
         refreshMovieDetail = RefreshMovieDetailUseCase(repository),
+        getExternalRatings = GetExternalRatingsUseCase(repository),
     )
 
     @Test
@@ -95,6 +99,25 @@ class MovieDetailViewModelTest {
             val state = expectMostRecentItemAfter { !it.isRefreshing }
             assertTrue(state.content is MovieDetailContent.Detail)
         }
+    }
+
+    @Test
+    fun `given detail has imdb id, when external ratings load, then detail shows imdb and rotten tomatoes`() = runTest {
+        repository.externalRatingsResult = Result.success(
+            ExternalRatings(imdb = "8.8", rottenTomatoes = "81%", metascore = "66"),
+        )
+        repository.onDetailRefreshCachePopulation = { aDetail }
+
+        viewModel().uiState.test {
+            val state = expectMostRecentItemAfter {
+                (it.content as? MovieDetailContent.Detail)?.detail?.externalRatings?.hasAny == true
+            }
+            val ratings = (state.content as MovieDetailContent.Detail).detail.externalRatings
+            assertEquals("8.8/10", ratings.imdb)
+            assertEquals("81%", ratings.rottenTomatoes)
+            assertEquals("66/100", ratings.metascore)
+        }
+        assertEquals(listOf("tt0137523"), repository.externalRatingCalls)
     }
 
     /** Awaits items until [predicate] holds, failing the test on timeout. */

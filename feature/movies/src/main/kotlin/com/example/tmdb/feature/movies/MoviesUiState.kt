@@ -1,61 +1,86 @@
 package com.example.tmdb.feature.movies
 
 import androidx.compose.runtime.Immutable
-import com.example.tmdb.domain.model.AppError
+import com.example.tmdb.domain.model.HomeList
 import com.example.tmdb.domain.model.Movie
-import com.example.tmdb.domain.model.MovieCategory
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 
 data class MoviesUiState(
-    val selectedCategory: MovieCategory = MovieCategory.POPULAR,
+    val trendingWindow: TrendingWindow = TrendingWindow.TODAY,
+    val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
-    val filters: MovieFilters = MovieFilters(),
-    val content: MoviesContent = MoviesContent.Loading,
+    val errorMessage: String? = null,
+    val hero: MovieListItem? = null,
+    val sections: ImmutableList<HomeSectionUi> = persistentListOf(),
 )
 
-/**
- * Exactly one of these renders at a time. Invariant: cached movies always win —
- * a refresh failure with a non-empty cache keeps showing [Movies], never [Error].
- */
-sealed interface MoviesContent {
-    data object Loading : MoviesContent
-    data object Empty : MoviesContent
-    data class Error(val error: AppError) : MoviesContent
-    data class Movies(
-        val movies: ImmutableList<MovieListItem>,
-        val isAppending: Boolean = false,
-        val canLoadMore: Boolean = false,
-        /** Non-null when the last refresh failed but cached movies are still shown. */
-        val staleError: AppError? = null,
-    ) : MoviesContent
-
-    /** Cache is non-empty but the active filters exclude everything. */
-    data object NoMatches : MoviesContent
+enum class TrendingWindow {
+    TODAY,
+    THIS_WEEK,
 }
 
-/** UI projection of [Movie]; poster path already resolved to a loadable URL. */
+@Immutable
+data class HomeSectionUi(
+    val list: HomeList,
+    val title: String,
+    val subtitle: String,
+    val movies: ImmutableList<MovieListItem>,
+)
+
+/** UI projection of [Movie]; image paths are already resolved to loadable URLs. */
 @Immutable
 data class MovieListItem(
     val id: Long,
     val title: String,
+    val overview: String,
     val posterUrl: String?,
+    val backdropUrl: String?,
     val rating: Double,
+    val voteCount: Int,
     val releaseYear: String?,
 )
 
 private const val POSTER_BASE = "https://image.tmdb.org/t/p/w342"
+private const val BACKDROP_BASE = "https://image.tmdb.org/t/p/w780"
 
 internal fun Movie.toListItem(): MovieListItem = MovieListItem(
     id = id.value,
     title = title,
+    overview = overview,
     posterUrl = posterPath?.let { POSTER_BASE + it },
+    backdropUrl = backdropPath?.let { BACKDROP_BASE + it },
     rating = voteAverage,
+    voteCount = voteCount,
     releaseYear = releaseDate?.year?.toString(),
 )
 
-/** Tab label for a category. */
-internal fun MovieCategory.label(): String = when (this) {
-    MovieCategory.POPULAR -> "Popular"
-    MovieCategory.TOP_RATED -> "Top Rated"
-    MovieCategory.NOW_PLAYING -> "Now Playing"
+internal fun List<Movie>.toMovieListItems(): ImmutableList<MovieListItem> =
+    map { it.toListItem() }.toImmutableList()
+
+internal fun HomeList.title(trendingWindow: TrendingWindow): String = when (this) {
+    HomeList.TRENDING_TODAY,
+    HomeList.TRENDING_THIS_WEEK -> "Trending"
+    HomeList.POPULAR -> "What's Popular"
+    HomeList.NOW_PLAYING -> "In Theaters"
+    HomeList.TOP_RATED -> "Top Rated"
+    HomeList.UPCOMING -> "Coming Soon"
+}
+
+internal fun HomeList.subtitle(trendingWindow: TrendingWindow): String = when (this) {
+    HomeList.TRENDING_TODAY,
+    HomeList.TRENDING_THIS_WEEK -> when (trendingWindow) {
+        TrendingWindow.TODAY -> "Movies people are watching today"
+        TrendingWindow.THIS_WEEK -> "Movies people talked about this week"
+    }
+    HomeList.POPULAR -> "High-traffic picks from TMDB"
+    HomeList.NOW_PLAYING -> "Current theatrical releases"
+    HomeList.TOP_RATED -> "Audience favorites with strong vote averages"
+    HomeList.UPCOMING -> "Upcoming releases to keep on your radar"
+}
+
+internal fun TrendingWindow.toHomeList(): HomeList = when (this) {
+    TrendingWindow.TODAY -> HomeList.TRENDING_TODAY
+    TrendingWindow.THIS_WEEK -> HomeList.TRENDING_THIS_WEEK
 }

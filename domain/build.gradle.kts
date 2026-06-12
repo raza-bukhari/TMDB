@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
     implementation(project(":core:common"))
+    implementation(libs.androidx.paging.common)
 }
 
 // The contract holds :domain to an 80% line-coverage floor.

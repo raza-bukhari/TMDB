@@ -1,3 +1,4 @@
+import com.tmdb.buildlogic.omdbApiKey
 import com.tmdb.buildlogic.tmdbApiToken
 
 plugins {
@@ -16,6 +17,9 @@ android {
         // Empty when absent; the :app assemble path fails fast instead (see D-004/D-010).
         buildConfigField("String", "TMDB_API_TOKEN", "\"${tmdbApiToken()}\"")
         buildConfigField("String", "TMDB_BASE_URL", "\"https://api.themoviedb.org/3/\"")
+        // Optional: IMDb/Rotten Tomatoes via OMDb; features hide when blank.
+        buildConfigField("String", "OMDB_API_KEY", "\"${omdbApiKey()}\"")
+        buildConfigField("String", "OMDB_BASE_URL", "\"https://www.omdbapi.com/\"")
     }
 }
 
@@ -23,6 +27,7 @@ dependencies {
     implementation(project(":core:common"))
     implementation(project(":domain"))
 
+    implementation(libs.koin.android)
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.kotlinx.serialization)
     implementation(platform(libs.okhttp.bom))

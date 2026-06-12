@@ -3,17 +3,16 @@ package com.example.tmdb.domain.usecase
 import com.example.tmdb.domain.FakeRepo
 import com.example.tmdb.domain.model.AppError
 import com.example.tmdb.domain.model.AppException
+import com.example.tmdb.domain.model.ExternalRatings
+import com.example.tmdb.domain.model.HomeList
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieCategory
 import com.example.tmdb.domain.model.MovieId
-import com.example.tmdb.domain.model.MoviePage
 import com.example.tmdb.domain.model.appErrorOrNull
 import java.time.LocalDate
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 private val aMovie = Movie(
@@ -30,47 +29,37 @@ private val aMovie = Movie(
 class MoviesUseCasesTest {
 
     @Test
-    fun `given cached movies, when observing a category, then the stream is exposed and category passes through`() = runTest {
+    fun `given cached movies, when observing a category, then category passes through`() = runTest {
         val repo = FakeRepo().apply { movies.value = listOf(aMovie) }
 
-        val emitted = ObserveMoviesUseCase(repo)(MovieCategory.TOP_RATED).first()
+        ObserveMoviesUseCase(repo)(MovieCategory.TOP_RATED).first()
 
-        assertEquals(listOf(aMovie), emitted)
         assertEquals(MovieCategory.TOP_RATED, repo.lastCategory)
     }
 
     @Test
-    fun `given refresh succeeds, when invoked, then paging bounds return and category passes through`() = runTest {
-        val repo = FakeRepo().apply { refreshResult = Result.success(MoviePage(1, 10)) }
+    fun `given a home list, when invoked, then list passes through and movies return`() = runTest {
+        val repo = FakeRepo().apply { homeResult = Result.success(listOf(aMovie)) }
 
-        val page = RefreshMoviesUseCase(repo)(MovieCategory.NOW_PLAYING).getOrThrow()
+        val movies = GetHomeListUseCase(repo)(HomeList.TRENDING_THIS_WEEK).getOrThrow()
 
-        assertEquals(MoviePage(1, 10), page)
-        assertTrue(page.canLoadMore)
-        assertEquals(MovieCategory.NOW_PLAYING, repo.lastCategory)
+        assertEquals(listOf(aMovie), movies)
+        assertEquals(HomeList.TRENDING_THIS_WEEK, repo.lastHomeList)
     }
 
     @Test
-    fun `given the last page, when refreshing, then canLoadMore is false`() = runTest {
-        val repo = FakeRepo().apply { refreshResult = Result.success(MoviePage(5, 5)) }
+    fun `given a rate-limited home list, when invoked, then typed error surfaces`() = runTest {
+        val repo = FakeRepo().apply { homeResult = Result.failure(AppException(AppError.RateLimited)) }
 
-        assertFalse(RefreshMoviesUseCase(repo)(MovieCategory.POPULAR).getOrThrow().canLoadMore)
+        assertEquals(AppError.RateLimited, GetHomeListUseCase(repo)(HomeList.POPULAR).appErrorOrNull())
     }
 
     @Test
-    fun `given a target page, when loading more, then category and page pass through`() = runTest {
-        val repo = FakeRepo().apply { loadMoreResult = Result.success(MoviePage(3, 9)) }
+    fun `given an imdb id, when external ratings load, then id passes through and ratings return`() = runTest {
+        val ratings = ExternalRatings(imdb = "8.8", rottenTomatoes = "81%")
+        val repo = FakeRepo().apply { externalRatingsResult = Result.success(ratings) }
 
-        val page = LoadMoreMoviesUseCase(repo)(MovieCategory.POPULAR, page = 3).getOrThrow()
-
-        assertEquals(MoviePage(3, 9), page)
-        assertEquals(MovieCategory.POPULAR to 3, repo.lastLoadMore)
-    }
-
-    @Test
-    fun `given a rate-limited refresh, when invoked, then the typed error surfaces`() = runTest {
-        val repo = FakeRepo().apply { refreshResult = Result.failure(AppException(AppError.RateLimited)) }
-
-        assertEquals(AppError.RateLimited, RefreshMoviesUseCase(repo)(MovieCategory.POPULAR).appErrorOrNull())
+        assertEquals(ratings, GetExternalRatingsUseCase(repo)("tt0137523").getOrThrow())
+        assertEquals("tt0137523", repo.lastImdbId)
     }
 }

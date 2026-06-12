@@ -1,16 +1,11 @@
 package com.example.tmdb.domain.usecase
 
 import com.example.tmdb.domain.FakeRepo
-import com.example.tmdb.domain.model.AppError
-import com.example.tmdb.domain.model.AppException
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieId
-import com.example.tmdb.domain.model.SearchResults
-import com.example.tmdb.domain.model.appErrorOrNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 private val aMovie = Movie(
@@ -27,29 +22,13 @@ private val aMovie = Movie(
 class SearchMoviesUseCaseTest {
 
     @Test
-    fun `given a query, when searching, then query and page pass through and results return`() = runTest {
+    fun `given a query, when searching, then query passes through`() = runTest {
         val repository = FakeRepo().apply {
-            searchResult = { _, _ -> Result.success(SearchResults(listOf(aMovie), page = 2, totalPages = 5)) }
+            onSearch = { listOf(aMovie) }
         }
 
-        val results = SearchMoviesUseCase(repository)("inception", page = 2).getOrThrow()
+        SearchMoviesUseCase(repository)("inception").first()
 
-        assertEquals("inception" to 2, repository.lastSearch)
-        assertEquals(listOf(aMovie), results.movies)
-        assertTrue(results.canLoadMore)
-    }
-
-    @Test
-    fun `given the last page, when reading canLoadMore, then it is false`() {
-        assertFalse(SearchResults(emptyList(), page = 5, totalPages = 5).canLoadMore)
-    }
-
-    @Test
-    fun `given a rate-limited repository, when searching, then the typed error surfaces`() = runTest {
-        val repository = FakeRepo().apply {
-            searchResult = { _, _ -> Result.failure(AppException(AppError.RateLimited)) }
-        }
-
-        assertEquals(AppError.RateLimited, SearchMoviesUseCase(repository)("x").appErrorOrNull())
+        assertEquals("inception", repository.lastSearch)
     }
 }

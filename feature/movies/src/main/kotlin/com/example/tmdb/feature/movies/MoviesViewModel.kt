@@ -3,24 +3,18 @@ package com.example.tmdb.feature.movies
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.tmdb.domain.model.AppError
-import com.example.tmdb.domain.model.MovieCategory
-import com.example.tmdb.domain.model.MoviePage
+import com.example.tmdb.domain.model.HomeList
 import com.example.tmdb.domain.model.asAppError
-import com.example.tmdb.domain.usecase.LoadMoreMoviesUseCase
-import com.example.tmdb.domain.usecase.ObserveMoviesUseCase
-import com.example.tmdb.domain.usecase.RefreshMoviesUseCase
+import com.example.tmdb.domain.usecase.GetHomeListUseCase
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -28,137 +22,106 @@ sealed interface MoviesEffect {
     data class NavigateToDetail(val movieId: Long) : MoviesEffect
 }
 
-@OptIn(ExperimentalCoroutinesApi::class)
 internal class MoviesViewModel(
-    private val observeMovies: ObserveMoviesUseCase,
-    private val refreshMovies: RefreshMoviesUseCase,
-    private val loadMoreMovies: LoadMoreMoviesUseCase,
+    private val getHomeList: GetHomeListUseCase,
 ) : ViewModel() {
 
-    private val selectedCategory = MutableStateFlow(MovieCategory.POPULAR)
-    private val status = MutableStateFlow(Status())
-
-    // Per-category paging + refresh bookkeeping; only touched on the Main dispatcher (viewModelScope).
-    private val pageByCategory = mutableMapOf<MovieCategory, MoviePage>()
-    private val refreshedCategories = mutableSetOf<MovieCategory>()
-
-    private val filters = MutableStateFlow(MovieFilters())
+    private val _uiState = MutableStateFlow(MoviesUiState())
+    val uiState: StateFlow<MoviesUiState> = _uiState
 
     private val _effects = Channel<MoviesEffect>(Channel.BUFFERED)
     val effects: Flow<MoviesEffect> = _effects.receiveAsFlow()
-
-    val uiState: StateFlow<MoviesUiState> =
-        combine(
-            // Pair category with its movies in one source so the displayed category and the
-            // shown list never disagree mid-switch; flatMapLatest cancels the old tab's DB query.
-            selectedCategory.flatMapLatest { category -> observeMovies(category).map { category to it } },
-            status,
-            filters,
-        ) { (category, movies), st, activeFilters ->
-            val visible = movies.applyFilters(activeFilters)
-            MoviesUiState(
-                selectedCategory = category,
-                isRefreshing = st.isRefreshing,
-                filters = activeFilters,
-                content = when {
-                    visible.isNotEmpty() -> MoviesContent.Movies(
-                        movies = visible.map { it.toListItem() }.toImmutableList(),
-                        // Appending more pages only makes sense in the unfiltered/default view.
-                        isAppending = st.isAppending,
-                        canLoadMore = st.canLoadMore && activeFilters.isDefault,
-                        // Cache wins, but flag a failed refresh so the UI can warn non-blockingly.
-                        staleError = st.error,
-                    )
-                    // Cache has movies but the filters exclude them all.
-                    movies.isNotEmpty() -> MoviesContent.NoMatches
-                    st.isRefreshing -> MoviesContent.Loading
-                    st.error != null -> MoviesContent.Error(st.error)
-                    else -> MoviesContent.Empty
-                },
-            )
-        }.stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = MoviesUiState(isRefreshing = true),
-        )
+    private var refreshJob: Job? = null
 
     init {
-        refresh(MovieCategory.POPULAR)
+        refreshHome()
     }
 
-    fun onCategorySelected(category: MovieCategory) {
-        if (selectedCategory.value == category) return
-        selectedCategory.value = category
-        // Reflect the newly-selected category's known paging; drop the other tab's transient error/append.
-        status.value = Status(
-            isRefreshing = category !in refreshedCategories,
-            canLoadMore = pageByCategory[category]?.canLoadMore == true,
-        )
-        if (category !in refreshedCategories) refresh(category)
+    fun onTrendingWindowSelected(window: TrendingWindow) {
+        if (window == _uiState.value.trendingWindow) return
+        refreshHome(window)
     }
 
-    fun onRetryClicked() = refresh(selectedCategory.value)
+    fun onRefresh() {
+        refreshHome()
+    }
 
-    /** Pull-to-refresh on the current tab. */
-    fun onRefresh() = refresh(selectedCategory.value)
-
-    fun onLoadMoreRequested() {
-        val category = selectedCategory.value
-        val page = pageByCategory[category] ?: return
-        if (!page.canLoadMore || status.value.isAppending || status.value.isRefreshing) return
-        status.update { it.copy(isAppending = true) }
-        viewModelScope.launch {
-            loadMoreMovies(category, page.page + 1).fold(
-                onSuccess = { next ->
-                    pageByCategory[category] = next
-                    if (selectedCategory.value == category) {
-                        status.update { it.copy(isAppending = false, canLoadMore = next.canLoadMore) }
-                    }
-                },
-                // Keep the existing list; the user can scroll again to retry the append.
-                onFailure = {
-                    if (selectedCategory.value == category) status.update { it.copy(isAppending = false) }
-                },
-            )
-        }
+    fun onRetryClicked() {
+        refreshHome()
     }
 
     fun onMovieClicked(movieId: Long) {
         viewModelScope.launch { _effects.send(MoviesEffect.NavigateToDetail(movieId)) }
     }
 
-    fun onFiltersChanged(newFilters: MovieFilters) {
-        filters.value = newFilters
-    }
+    private fun refreshHome(trendingWindow: TrendingWindow = _uiState.value.trendingWindow) {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
+            val hasContent = _uiState.value.sections.isNotEmpty()
+            _uiState.update {
+                it.copy(
+                    trendingWindow = trendingWindow,
+                    isLoading = !hasContent,
+                    isRefreshing = hasContent,
+                    errorMessage = null,
+                )
+            }
 
-    fun onFiltersReset() {
-        filters.value = MovieFilters()
-    }
-
-    private fun refresh(category: MovieCategory) {
-        status.update { it.copy(isRefreshing = true, error = null) }
-        viewModelScope.launch {
-            refreshMovies(category).fold(
-                onSuccess = { page ->
-                    refreshedCategories += category
-                    pageByCategory[category] = page
-                    if (selectedCategory.value == category) {
-                        status.update { it.copy(isRefreshing = false, canLoadMore = page.canLoadMore) }
+            val result = loadSections(trendingWindow)
+            result.fold(
+                onSuccess = { sections ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            isRefreshing = false,
+                            hero = sections.firstOrNull()?.movies?.firstOrNull(),
+                            sections = sections.toImmutableList(),
+                        )
                     }
                 },
-                onFailure = { t ->
-                    if (selectedCategory.value == category) {
-                        status.update { it.copy(isRefreshing = false, error = t.asAppError()) }
+                onFailure = { throwable ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            isRefreshing = false,
+                            errorMessage = throwable.asHomeErrorMessage(),
+                        )
                     }
                 },
             )
         }
     }
 
-    private data class Status(
-        val isRefreshing: Boolean = false,
-        val isAppending: Boolean = false,
-        val error: AppError? = null,
-        val canLoadMore: Boolean = false,
-    )
+    private suspend fun loadSections(trendingWindow: TrendingWindow): Result<List<HomeSectionUi>> =
+        coroutineScope {
+            val lists = listOf(
+                trendingWindow.toHomeList(),
+                HomeList.POPULAR,
+                HomeList.NOW_PLAYING,
+                HomeList.TOP_RATED,
+                HomeList.UPCOMING,
+            )
+            val deferred = lists.map { list -> list to async { getHomeList(list) } }
+            val sections = mutableListOf<HomeSectionUi>()
+            deferred.forEach { (list, request) ->
+                val movies = request.await().getOrElse { return@coroutineScope Result.failure(it) }
+                if (movies.isNotEmpty()) {
+                    sections += HomeSectionUi(
+                        list = list,
+                        title = list.title(trendingWindow),
+                        subtitle = list.subtitle(trendingWindow),
+                        movies = movies.toMovieListItems(),
+                    )
+                }
+            }
+            Result.success(sections)
+        }
+}
+
+private fun Throwable.asHomeErrorMessage(): String = when (asAppError()) {
+    AppError.Offline -> "You're offline. Connect and try again."
+    AppError.InvalidToken -> "TMDB rejected the API token. Check your local.properties."
+    AppError.NotFound -> "The TMDB list is unavailable right now."
+    AppError.RateLimited -> "Too many requests. Give it a moment and retry."
+    is AppError.Unknown -> "Something went wrong. Please try again."
 }

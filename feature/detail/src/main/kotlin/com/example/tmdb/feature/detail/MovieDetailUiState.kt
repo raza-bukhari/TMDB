@@ -2,7 +2,9 @@ package com.example.tmdb.feature.detail
 
 import androidx.compose.runtime.Immutable
 import com.example.tmdb.domain.model.AppError
+import com.example.tmdb.domain.model.ExternalRatings
 import com.example.tmdb.domain.model.MovieDetail
+import com.example.tmdb.domain.model.Movie
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 
@@ -19,6 +21,29 @@ sealed interface MovieDetailContent {
 }
 
 @Immutable
+data class CastMemberUi(
+    val id: Long,
+    val name: String,
+    val character: String,
+    val profileUrl: String?,
+)
+
+@Immutable
+data class WatchProviderUi(
+    val id: Int,
+    val name: String,
+    val logoUrl: String?,
+)
+
+@Immutable
+data class MovieSummaryUi(
+    val id: Long,
+    val title: String,
+    val posterUrl: String?,
+    val rating: Double,
+)
+
+@Immutable
 data class MovieDetailUi(
     val id: Long,
     val title: String,
@@ -29,13 +54,31 @@ data class MovieDetailUi(
     val releaseYear: String?,
     val runtime: String?,
     val rating: Double,
+    val certification: String?,
     val genres: ImmutableList<String>,
+    val cast: ImmutableList<CastMemberUi>,
+    val directors: ImmutableList<String>,
+    val producers: ImmutableList<String>,
+    val similarMovies: ImmutableList<MovieSummaryUi>,
+    val watchProviders: ImmutableList<WatchProviderUi>,
+    val externalRatings: ExternalRatingsUi = ExternalRatingsUi(),
 )
+
+@Immutable
+data class ExternalRatingsUi(
+    val imdb: String? = null,
+    val rottenTomatoes: String? = null,
+    val metascore: String? = null,
+) {
+    val hasAny: Boolean get() = imdb != null || rottenTomatoes != null || metascore != null
+}
 
 private const val POSTER_BASE = "https://image.tmdb.org/t/p/w342"
 private const val BACKDROP_BASE = "https://image.tmdb.org/t/p/w780"
+private const val PROFILE_BASE = "https://image.tmdb.org/t/p/w185"
+private const val LOGO_BASE = "https://image.tmdb.org/t/p/w92"
 
-internal fun MovieDetail.toUi(): MovieDetailUi = MovieDetailUi(
+internal fun MovieDetail.toUi(externalRatings: ExternalRatings = ExternalRatings()): MovieDetailUi = MovieDetailUi(
     id = id.value,
     title = title,
     tagline = tagline,
@@ -45,7 +88,40 @@ internal fun MovieDetail.toUi(): MovieDetailUi = MovieDetailUi(
     releaseYear = releaseDate?.year?.toString(),
     runtime = runtimeMinutes?.let { formatRuntime(it) },
     rating = voteAverage,
+    certification = certification,
     genres = genres.toImmutableList(),
+    cast = cast.map { member ->
+        CastMemberUi(
+            id = member.id,
+            name = member.name,
+            character = member.character,
+            profileUrl = member.profilePath?.let { PROFILE_BASE + it }
+        )
+    }.toImmutableList(),
+    directors = directors.toImmutableList(),
+    producers = producers.toImmutableList(),
+    similarMovies = similarMovies.map { movie ->
+        MovieSummaryUi(
+            id = movie.id.value,
+            title = movie.title,
+            posterUrl = movie.posterPath?.let { POSTER_BASE + it },
+            rating = movie.voteAverage
+        )
+    }.toImmutableList(),
+    watchProviders = watchProviders.map { provider ->
+        WatchProviderUi(
+            id = provider.id,
+            name = provider.name,
+            logoUrl = provider.logoPath?.let { LOGO_BASE + it }
+        )
+    }.toImmutableList(),
+    externalRatings = externalRatings.toUi(),
+)
+
+private fun ExternalRatings.toUi(): ExternalRatingsUi = ExternalRatingsUi(
+    imdb = imdb?.let { "$it/10" },
+    rottenTomatoes = rottenTomatoes,
+    metascore = metascore?.let { "$it/100" },
 )
 
 internal fun formatRuntime(totalMinutes: Int): String {

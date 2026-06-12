@@ -9,6 +9,8 @@ android {
 
 dependencies {
     implementation(libs.androidx.compose.material.icons.core)
+    implementation(libs.androidx.paging.compose)
+    implementation(libs.androidx.paging.runtime)
 }
 
 // 80% floor on ViewModel/UiState logic; Composables are verified by UI tests, not Kover.
