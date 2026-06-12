@@ -27,10 +27,12 @@ import com.example.tmdb.core.navigation.MovieDetailRoute
 import kotlinx.coroutines.launch
 import com.example.tmdb.core.navigation.MoviesRoute
 import com.example.tmdb.core.navigation.PersonRoute
+import com.example.tmdb.core.navigation.VideoPlayerRoute
 import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.feature.detail.MovieDetailScreen
 import com.example.tmdb.feature.movies.MoviesScreen
 import com.example.tmdb.feature.person.PersonScreen
+import com.example.tmdb.feature.videoplayer.VideoPlayerScreen
 
 private const val NAV_ANIM_MS = 300
 
@@ -76,7 +78,13 @@ class MainActivity : ComponentActivity() {
                             onBackClick = { navController.popBackStack() },
                             onMovieClick = { movieId -> navController.navigate(MovieDetailRoute(movieId, MediaType.MOVIE.name)) },
                             onPersonClick = { personId -> navController.navigate(PersonRoute(personId)) },
+                            onVideoClick = { movieId, mediaType, startKey ->
+                                navController.navigate(VideoPlayerRoute(movieId, mediaType, startKey))
+                            },
                         )
+                    }
+                    composable<VideoPlayerRoute> {
+                        VideoPlayerScreen(onBackClick = { navController.popBackStack() })
                     }
                     composable<PersonRoute> {
                         PersonScreen(

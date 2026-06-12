@@ -23,6 +23,9 @@ import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
@@ -75,10 +78,12 @@ import com.example.tmdb.core.designsystem.theme.TMDBTheme
 import com.example.tmdb.core.designsystem.theme.AppTheme
 import com.example.tmdb.domain.model.MediaKey
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 
 object MoviesTestTags {
     const val HOME = "movies_home"
+    const val HERO_PAGER = "movies_hero_pager"
     const val SEARCH = "movies_search_button"
     const val SEARCH_FIELD = "movies_inline_search_field"
     const val SEARCH_RESULTS = "movies_inline_search_results"
@@ -257,7 +262,9 @@ private fun HomeFeed(
                 MoviesTab.HOME -> {
                     item {
                         Hero(
-                            movie = state.hero,
+                            featured = state.sections.firstOrNull { it.movies.isNotEmpty() }
+                                ?.movies?.take(8)
+                                ?: listOfNotNull(state.hero),
                             selectedTheme = selectedTheme,
                             onThemeSelected = onThemeSelected,
                             searchQuery = state.searchQuery,
@@ -383,7 +390,7 @@ private fun CompactSearchHeader(
 
 @Composable
 private fun Hero(
-    movie: MovieListItem?,
+    featured: List<MovieListItem>,
     selectedTheme: AppTheme,
     onThemeSelected: (AppTheme) -> Unit,
     searchQuery: String,
@@ -393,7 +400,83 @@ private fun Hero(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(420.dp),
+            .height(440.dp),
+    ) {
+        val count = featured.size
+        if (count == 0) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            0f to MaterialTheme.colorScheme.primary,
+                            1f to MaterialTheme.colorScheme.secondary,
+                        ),
+                    ),
+            )
+        } else {
+            // A very large page count makes the pager loop forwards seamlessly; the real
+            // item is `page % count`.
+            val pagerState = rememberPagerState(pageCount = { if (count <= 1) count else Int.MAX_VALUE })
+
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .testTag(MoviesTestTags.HERO_PAGER),
+            ) { page ->
+                HeroPage(movie = featured[page % count], onMovieClick = onMovieClick)
+            }
+
+            if (count > 1) {
+                // Auto-advance; pauses while the user is dragging.
+                LaunchedEffect(pagerState, count) {
+                    while (true) {
+                        delay(HERO_AUTOSCROLL_MS)
+                        if (!pagerState.isScrollInProgress) {
+                            pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                        }
+                    }
+                }
+                PageIndicator(
+                    count = count,
+                    current = pagerState.currentPage % count,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 14.dp),
+                )
+            }
+        }
+
+        // Search bar stays pinned above the pager.
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        ) {
+            InlineSearchBar(
+                query = searchQuery,
+                onQueryChanged = onSearchQueryChanged,
+                actionText = selectedTheme.shortLabel,
+                onActionClick = { onThemeSelected(selectedTheme.next()) },
+                actionTestTag = MoviesTestTags.THEME,
+            )
+        }
+    }
+}
+
+private const val HERO_AUTOSCROLL_MS = 4000L
+
+@Composable
+private fun HeroPage(
+    movie: MovieListItem,
+    onMovieClick: (Long, com.example.tmdb.domain.model.MediaType) -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable { onMovieClick(movie.id, movie.mediaType) },
     ) {
         Box(
             modifier = Modifier
@@ -406,8 +489,8 @@ private fun Hero(
                 ),
         )
         AsyncImage(
-            model = movie?.backdropUrl ?: movie?.posterUrl,
-            contentDescription = movie?.title,
+            model = movie.backdropUrl ?: movie.posterUrl,
+            contentDescription = movie.title,
             contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxSize()
@@ -422,38 +505,49 @@ private fun Hero(
                     )
                 },
         )
-
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .align(Alignment.BottomStart)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 34.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            InlineSearchBar(
-                query = searchQuery,
-                onQueryChanged = onSearchQueryChanged,
-                actionText = selectedTheme.shortLabel,
-                onActionClick = { onThemeSelected(selectedTheme.next()) },
-                actionTestTag = MoviesTestTags.THEME,
-            )
-            Spacer(Modifier.weight(1f))
             Text(
-                text = "Welcome.",
-                style = MaterialTheme.typography.displaySmall,
+                text = movie.title,
+                style = MaterialTheme.typography.headlineMedium,
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = "Find what to watch from trending, popular, theatrical, top rated, movies, and series.",
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White.copy(alpha = 0.9f),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            movie?.let {
-                Spacer(Modifier.height(20.dp))
-                FeaturedMovie(movie = it, onMovieClick = onMovieClick)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                RatingBadge(rating = movie.rating)
+                movie.releaseYear?.let { HeroMetaChip(it) }
+                HeroMetaChip("${movie.voteCount} votes")
             }
+            Text(
+                text = movie.overview,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.78f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PageIndicator(count: Int, current: Int, modifier: Modifier = Modifier) {
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        repeat(count) { index ->
+            val active = index == current
+            Box(
+                modifier = Modifier
+                    .size(if (active) 8.dp else 6.dp)
+                    .clip(CircleShape)
+                    .background(if (active) Color.White else Color.White.copy(alpha = 0.45f)),
+            )
         }
     }
 }
@@ -523,36 +617,6 @@ private fun InlineSearchBar(
                 Text(text = actionText, color = Color.White)
             }
         }
-    }
-}
-
-@Composable
-private fun FeaturedMovie(movie: MovieListItem, onMovieClick: (Long, com.example.tmdb.domain.model.MediaType) -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onMovieClick(movie.id, movie.mediaType) },
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(
-            text = movie.title,
-            style = MaterialTheme.typography.titleLarge,
-            color = Color.White,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            RatingBadge(rating = movie.rating)
-            movie.releaseYear?.let { HeroMetaChip(it) }
-            HeroMetaChip("${movie.voteCount} votes")
-        }
-        Text(
-            text = movie.overview,
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color.White.copy(alpha = 0.78f),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
     }
 }
 

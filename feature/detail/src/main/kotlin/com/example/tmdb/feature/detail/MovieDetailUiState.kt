@@ -5,6 +5,7 @@ import com.example.tmdb.domain.model.AppError
 import com.example.tmdb.domain.model.ExternalRatings
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.Movie
+import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.model.MediaVideo
 import com.example.tmdb.domain.model.TvEpisode
 import com.example.tmdb.domain.model.TvSeason
@@ -43,6 +44,16 @@ data class WatchProviderUi(
     val name: String,
     val logoUrl: String?,
 )
+
+@Immutable
+data class VideoUi(
+    val key: String,
+    val name: String,
+    val type: String,
+) {
+    /** YouTube still used as the carousel card preview before playback starts. */
+    val thumbnailUrl: String get() = "https://img.youtube.com/vi/$key/hqdefault.jpg"
+}
 
 @Immutable
 data class MovieSummaryUi(
@@ -88,6 +99,7 @@ data class UserActivityUi(
 @Immutable
 data class MovieDetailUi(
     val id: Long,
+    val mediaType: MediaType = MediaType.MOVIE,
     val title: String,
     val tagline: String?,
     val overview: String,
@@ -111,7 +123,7 @@ data class MovieDetailUi(
     val producers: ImmutableList<String>,
     val similarMovies: ImmutableList<MovieSummaryUi>,
     val watchProviders: ImmutableList<WatchProviderUi>,
-    val trailerUrl: String? = null,
+    val videos: ImmutableList<VideoUi> = persistentListOf(),
     val externalRatings: ExternalRatingsUi = ExternalRatingsUi(),
     val userActivity: UserActivityUi? = null,
     val isWatchlisted: Boolean = false,
@@ -137,6 +149,7 @@ internal fun MovieDetail.toUi(
     watchProvidersOverride: List<WatchProvider>? = null,
 ): MovieDetailUi = MovieDetailUi(
     id = id.value,
+    mediaType = mediaType,
     title = title,
     tagline = tagline,
     overview = overview,
@@ -180,16 +193,28 @@ internal fun MovieDetail.toUi(
             logoUrl = provider.logoPath?.let { LOGO_BASE + it }
         )
     }.toImmutableList(),
-    trailerUrl = null,
+    videos = persistentListOf(),
     externalRatings = externalRatings.toUi(),
     userActivity = null,
     isWatchlisted = isWatchlisted,
 )
 
-internal fun List<MediaVideo>.primaryTrailerUrl(): String? =
-    firstOrNull { it.type.equals("Trailer", ignoreCase = true) && it.official }?.youtubeUrl
-        ?: firstOrNull { it.type.equals("Trailer", ignoreCase = true) }?.youtubeUrl
-        ?: firstNotNullOfOrNull { it.youtubeUrl }
+/** YouTube videos for the carousel, official trailers first, then teasers, clips, the rest. */
+internal fun List<MediaVideo>.toVideoUiList(): List<VideoUi> =
+    asSequence()
+        .filter { it.site.equals("YouTube", ignoreCase = true) && it.key.isNotBlank() }
+        .sortedWith(compareBy({ videoTypeRank(it.type) }, { !it.official }))
+        .map { VideoUi(key = it.key, name = it.name, type = it.type) }
+        .toList()
+
+private fun videoTypeRank(type: String): Int = when (type.lowercase()) {
+    "trailer" -> 0
+    "teaser" -> 1
+    "clip" -> 2
+    "featurette" -> 3
+    "behind the scenes" -> 4
+    else -> 5
+}
 
 internal fun TvSeason.toUi(): TvSeasonUi = TvSeasonUi(
     id = id,

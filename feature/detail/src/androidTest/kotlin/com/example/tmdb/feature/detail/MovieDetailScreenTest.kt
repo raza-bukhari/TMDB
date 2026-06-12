@@ -53,8 +53,8 @@ class MovieDetailScreenTest {
                     onBackClick = {},
                     onMovieClick = {},
                     onPersonClick = {},
+                    onVideoClick = { _, _, _ -> },
                     onRetryClick = {},
-                    onTrailerClick = {},
                     onWatchlistToggle = {},
                     onActivityStatusSelected = {},
                     onFavoriteToggle = {},
@@ -83,8 +83,8 @@ class MovieDetailScreenTest {
                     onBackClick = {},
                     onMovieClick = {},
                     onPersonClick = {},
+                    onVideoClick = { _, _, _ -> },
                     onRetryClick = { retried = true },
-                    onTrailerClick = {},
                     onWatchlistToggle = {},
                     onActivityStatusSelected = {},
                     onFavoriteToggle = {},
@@ -111,8 +111,8 @@ class MovieDetailScreenTest {
                     onBackClick = { back = true },
                     onMovieClick = {},
                     onPersonClick = {},
+                    onVideoClick = { _, _, _ -> },
                     onRetryClick = {},
-                    onTrailerClick = {},
                     onWatchlistToggle = {},
                     onActivityStatusSelected = {},
                     onFavoriteToggle = {},
@@ -130,21 +130,24 @@ class MovieDetailScreenTest {
     }
 
     @Test
-    fun givenTrailerUrl_whenTrailerClicked_thenCallbackFires() {
-        var openedUrl: String? = null
+    fun givenVideos_whenDisplayed_thenVideoCarouselCardIsShown() {
         composeRule.setContent {
             TMDBTheme {
                 MovieDetailScreenContent(
                     state = MovieDetailUiState(
                         content = MovieDetailContent.Detail(
-                            detail.copy(trailerUrl = "https://www.youtube.com/watch?v=abc123"),
+                            detail.copy(
+                                videos = persistentListOf(
+                                    VideoUi(key = "abc123", name = "Official Trailer", type = "Trailer"),
+                                ),
+                            ),
                         ),
                     ),
                     onBackClick = {},
                     onMovieClick = {},
                     onPersonClick = {},
+                    onVideoClick = { _, _, _ -> },
                     onRetryClick = {},
-                    onTrailerClick = { openedUrl = it },
                     onWatchlistToggle = {},
                     onActivityStatusSelected = {},
                     onFavoriteToggle = {},
@@ -157,7 +160,6 @@ class MovieDetailScreenTest {
             }
         }
 
-        composeRule.onNodeWithTag(DetailTestTags.TRAILER).performClick()
-        assertTrue(openedUrl == "https://www.youtube.com/watch?v=abc123")
+        composeRule.onNodeWithTag(DetailTestTags.videoCard("abc123")).assertIsDisplayed()
     }
 }

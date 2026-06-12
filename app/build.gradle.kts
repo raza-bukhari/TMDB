@@ -46,6 +46,7 @@ dependencies {
     implementation(project(":feature:detail"))
     implementation(project(":feature:search"))
     implementation(project(":feature:person"))
+    implementation(project(":feature:videoplayer"))
     implementation(project(":core:designsystem"))
     implementation(project(":core:navigation"))
     implementation(project(":core:common"))

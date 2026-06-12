@@ -19,3 +19,10 @@ data class MovieDetailRoute(
 data class PersonRoute(
     val personId: Long,
 )
+
+@Serializable
+data class VideoPlayerRoute(
+    val movieId: Long,
+    val mediaType: String = "MOVIE",
+    val startVideoKey: String,
+)

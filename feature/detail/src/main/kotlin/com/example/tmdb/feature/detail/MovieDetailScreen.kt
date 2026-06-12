@@ -1,5 +1,10 @@
 package com.example.tmdb.feature.detail
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -51,7 +56,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -63,7 +67,6 @@ import coil3.compose.AsyncImage
 import com.example.tmdb.core.designsystem.ThemePreviews
 import com.example.tmdb.core.designsystem.component.ErrorState
 import com.example.tmdb.core.designsystem.component.GlassSurface
-import com.example.tmdb.core.designsystem.component.GradientPrimaryButton
 import com.example.tmdb.core.designsystem.component.FilterChipPill
 import com.example.tmdb.core.designsystem.component.LoadingState
 import com.example.tmdb.core.designsystem.component.RatingRing
@@ -77,7 +80,8 @@ object DetailTestTags {
     const val SCREEN = "detail_screen"
     const val BACK = "detail_back"
     const val WATCHLIST = "detail_watchlist"
-    const val TRAILER = "detail_trailer"
+    const val VIDEOS = "detail_videos"
+    fun videoCard(key: String) = "detail_video_$key"
 }
 
 private val HeaderMaxHeight = 300.dp
@@ -88,20 +92,20 @@ fun MovieDetailScreen(
     onBackClick: () -> Unit,
     onMovieClick: (Long) -> Unit,
     onPersonClick: (Long) -> Unit,
+    onVideoClick: (movieId: Long, mediaType: String, startKey: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val viewModel: MovieDetailViewModel = koinViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val uriHandler = LocalUriHandler.current
 
     MovieDetailScreenContent(
         state = state,
         onBackClick = onBackClick,
         onMovieClick = onMovieClick,
         onPersonClick = onPersonClick,
+        onVideoClick = onVideoClick,
         onRetryClick = viewModel::onRetryClicked,
         onWatchlistToggle = viewModel::onWatchlistToggle,
-        onTrailerClick = { url -> uriHandler.openUri(url) },
         onActivityStatusSelected = viewModel::onActivityStatusSelected,
         onFavoriteToggle = viewModel::onFavoriteToggle,
         onUserRatingSelected = viewModel::onUserRatingSelected,
@@ -120,9 +124,9 @@ internal fun MovieDetailScreenContent(
     onBackClick: () -> Unit,
     onMovieClick: (Long) -> Unit,
     onPersonClick: (Long) -> Unit,
+    onVideoClick: (movieId: Long, mediaType: String, startKey: String) -> Unit,
     onRetryClick: () -> Unit,
     onWatchlistToggle: () -> Unit,
-    onTrailerClick: (String) -> Unit,
     onActivityStatusSelected: (WatchlistStatus) -> Unit,
     onFavoriteToggle: () -> Unit,
     onUserRatingSelected: (Double?) -> Unit,
@@ -145,8 +149,8 @@ internal fun MovieDetailScreenContent(
                     onBackClick = onBackClick,
                     onMovieClick = onMovieClick,
                     onPersonClick = onPersonClick,
+                    onVideoClick = onVideoClick,
                     onWatchlistToggle = onWatchlistToggle,
-                    onTrailerClick = onTrailerClick,
                     onActivityStatusSelected = onActivityStatusSelected,
                     onFavoriteToggle = onFavoriteToggle,
                     onUserRatingSelected = onUserRatingSelected,
@@ -178,8 +182,8 @@ private fun CollapsingDetail(
     onBackClick: () -> Unit,
     onMovieClick: (Long) -> Unit,
     onPersonClick: (Long) -> Unit,
+    onVideoClick: (movieId: Long, mediaType: String, startKey: String) -> Unit,
     onWatchlistToggle: () -> Unit,
-    onTrailerClick: (String) -> Unit,
     onActivityStatusSelected: (WatchlistStatus) -> Unit,
     onFavoriteToggle: () -> Unit,
     onUserRatingSelected: (Double?) -> Unit,
@@ -231,8 +235,8 @@ private fun CollapsingDetail(
                 detail = detail,
                 onMovieClick = onMovieClick,
                 onPersonClick = onPersonClick,
+                onVideoClick = onVideoClick,
                 onWatchlistToggle = onWatchlistToggle,
-                onTrailerClick = onTrailerClick,
                 onActivityStatusSelected = onActivityStatusSelected,
                 onFavoriteToggle = onFavoriteToggle,
                 onUserRatingSelected = onUserRatingSelected,
@@ -280,8 +284,8 @@ private fun DetailInfo(
     detail: MovieDetailUi,
     onMovieClick: (Long) -> Unit,
     onPersonClick: (Long) -> Unit,
+    onVideoClick: (movieId: Long, mediaType: String, startKey: String) -> Unit,
     onWatchlistToggle: () -> Unit,
-    onTrailerClick: (String) -> Unit,
     onActivityStatusSelected: (WatchlistStatus) -> Unit,
     onFavoriteToggle: () -> Unit,
     onUserRatingSelected: (Double?) -> Unit,
@@ -315,22 +319,6 @@ private fun DetailInfo(
             }
             if (detail.externalRatings.hasAny) {
                 ExternalRatingsRow(detail.externalRatings)
-            }
-            if (detail.trailerUrl != null) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    GradientPrimaryButton(
-                        text = "Trailer",
-                        onClick = { onTrailerClick(detail.trailerUrl) },
-                        modifier = Modifier.testTag(DetailTestTags.TRAILER),
-                    )
-                    GlassSurface(cornerRadius = 999.dp, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)) {
-                        Text(
-                            text = "Official video",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
             }
             detail.tagline?.let {
                 Text(
@@ -370,6 +358,12 @@ private fun DetailInfo(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+
+        // Full-width so the carousel cards bleed to the screen edge, IMDb-style.
+        VideosCarousel(
+            videos = detail.videos,
+            onVideoClick = { key -> onVideoClick(detail.id, detail.mediaType.name, key) },
+        )
 
         MyActivityPanel(
             activity = detail.userActivity,
@@ -411,6 +405,7 @@ private fun DetailInfo(
                 Text(
                     text = "Where to Watch",
                     style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
                 LazyRow(
@@ -460,6 +455,7 @@ private fun DetailInfo(
                 Text(
                     text = "Top Cast",
                     style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
                 LazyRow(
@@ -522,6 +518,7 @@ private fun DetailInfo(
                 Text(
                     text = "You Might Also Like",
                     style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
                 LazyRow(
@@ -575,7 +572,7 @@ private fun MyActivityPanel(
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(text = "My Activity", style = MaterialTheme.typography.titleMedium)
+                    Text(text = "My Activity", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text(
                         text = if (isWatchlisted) "Saved locally" else "Save locally when you set activity",
                         style = MaterialTheme.typography.bodySmall,
@@ -666,6 +663,7 @@ private fun SeasonsSection(
         Text(
             text = "Seasons",
             style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
         LazyRow(
@@ -723,6 +721,7 @@ private fun EpisodesSection(
         Text(
             text = selectedSeasonNumber?.let { "Season $it Episodes" } ?: "Episodes",
             style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
         Column(
@@ -869,17 +868,54 @@ private fun DetailWatchlistButton(
     scrim: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    IconButton(
+    // Modern frosted circular toggle: translucent glass when unsaved, a filled
+    // accent pill with a gentle pop + shadow once saved.
+    val container by animateColorAsState(
+        targetValue = when {
+            isWatchlisted -> MaterialTheme.colorScheme.secondary
+            scrim -> Color.Black.copy(alpha = 0.30f)
+            else -> MaterialTheme.colorScheme.surfaceVariant
+        },
+        label = "watchlistContainer",
+    )
+    val iconTint = when {
+        isWatchlisted -> MaterialTheme.colorScheme.onSecondary
+        scrim -> Color.White
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+    val border = when {
+        isWatchlisted -> null
+        scrim -> BorderStroke(1.dp, Color.White.copy(alpha = 0.55f))
+        else -> BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+    }
+    val scale by animateFloatAsState(
+        targetValue = if (isWatchlisted) 1.08f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "watchlistScale",
+    )
+
+    Surface(
         onClick = onClick,
+        shape = CircleShape,
+        color = container,
+        border = border,
+        shadowElevation = if (isWatchlisted) 6.dp else 0.dp,
         modifier = modifier
-            .then(if (scrim) Modifier.clip(CircleShape).background(Color.Black.copy(alpha = 0.35f)) else Modifier)
+            .size(44.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
             .testTag(DetailTestTags.WATCHLIST),
     ) {
-        Icon(
-            imageVector = Icons.Filled.Star,
-            contentDescription = if (isWatchlisted) "Remove from watchlist" else "Add to watchlist",
-            tint = if (isWatchlisted) MaterialTheme.colorScheme.secondary else if (scrim) Color.White else MaterialTheme.colorScheme.onSurface,
-        )
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = Icons.Filled.Star,
+                contentDescription = if (isWatchlisted) "Remove from watchlist" else "Add to watchlist",
+                tint = iconTint,
+                modifier = Modifier.size(22.dp),
+            )
+        }
     }
 }
 
@@ -998,9 +1034,9 @@ private fun MovieDetailPreview() {
             onBackClick = {},
             onMovieClick = {},
             onPersonClick = {},
+            onVideoClick = { _, _, _ -> },
             onRetryClick = {},
             onWatchlistToggle = {},
-            onTrailerClick = {},
             onActivityStatusSelected = {},
             onFavoriteToggle = {},
             onUserRatingSelected = {},

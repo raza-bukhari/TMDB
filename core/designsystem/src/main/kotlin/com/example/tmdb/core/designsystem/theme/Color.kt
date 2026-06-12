@@ -22,8 +22,8 @@ internal val LightOnBackground = Color(0xFF191C1E)
 internal val LightSurface = Color(0xFFFCFCFF)
 internal val LightOnSurface = Color(0xFF191C1E)
 internal val LightSurfaceVariant = Color(0xFFDDE3EA)
-internal val LightOnSurfaceVariant = Color(0xFF41484D)
-internal val LightOutline = Color(0xFF71787E)
+internal val LightOnSurfaceVariant = Color(0xFF2E3338)
+internal val LightOutline = Color(0xFF5C636A)
 
 // --- Dark scheme roles ---
 internal val DarkPrimary = Color(0xFFADC9EC)

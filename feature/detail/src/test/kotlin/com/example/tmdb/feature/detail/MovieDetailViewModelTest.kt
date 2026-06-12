@@ -145,7 +145,7 @@ class MovieDetailViewModelTest {
     }
 
     @Test
-    fun `given a YouTube trailer exists, when videos load, then detail exposes trailer url`() = runTest {
+    fun `given YouTube videos exist, when videos load, then detail exposes them for the carousel`() = runTest {
         repository.onDetailRefreshCachePopulation = { aDetail }
         repository.videosResult = Result.success(
             listOf(
@@ -162,13 +162,12 @@ class MovieDetailViewModelTest {
 
         viewModel().uiState.test {
             val state = expectMostRecentItemAfter {
-                (it.content as? MovieDetailContent.Detail)?.detail?.trailerUrl != null
+                (it.content as? MovieDetailContent.Detail)?.detail?.videos?.isNotEmpty() == true
             }
 
-            assertEquals(
-                "https://www.youtube.com/watch?v=abc123",
-                (state.content as MovieDetailContent.Detail).detail.trailerUrl,
-            )
+            val videos = (state.content as MovieDetailContent.Detail).detail.videos
+            assertEquals("abc123", videos.first().key)
+            assertEquals("Trailer", videos.first().type)
         }
     }
 

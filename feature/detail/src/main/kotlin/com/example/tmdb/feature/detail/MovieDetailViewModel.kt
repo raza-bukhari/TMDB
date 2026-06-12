@@ -76,7 +76,7 @@ internal class MovieDetailViewModel(
     private val isRefreshing = MutableStateFlow(true)
     private val refreshError = MutableStateFlow<AppError?>(null)
     private val externalRatings = MutableStateFlow(ExternalRatings())
-    private val trailerUrl = MutableStateFlow<String?>(null)
+    private val videos = MutableStateFlow<List<VideoUi>>(emptyList())
     private val watchProviderRegion = MutableStateFlow<WatchProviderRegion?>(null)
     private val selectedSeasonNumber = MutableStateFlow<Int?>(null)
     private val seasonEpisodes = MutableStateFlow<List<TvEpisodeUi>>(emptyList())
@@ -104,14 +104,14 @@ internal class MovieDetailViewModel(
     private val renderInputs =
         combine(
             detailState,
-            trailerUrl,
+            videos,
             seasonEpisodes,
             userActivity,
             watchProviderRegion,
-        ) { detailState, trailer, episodes, activity, providers ->
+        ) { detailState, videos, episodes, activity, providers ->
             RenderInputs(
                 detailState = detailState,
-                trailer = trailer,
+                videos = videos,
                 episodes = episodes,
                 activity = activity,
                 providers = providers,
@@ -133,7 +133,7 @@ internal class MovieDetailViewModel(
                             isWatchlisted = detail.mediaKey in inputs.detailState.savedKeys,
                             watchProvidersOverride = inputs.providers?.displayProviders,
                         ).copy(
-                            trailerUrl = inputs.trailer,
+                            videos = inputs.videos.toImmutableList(),
                             selectedSeasonNumber = seasonNumber ?: detail.seasons.firstOrNull()?.seasonNumber,
                             episodes = inputs.episodes.toImmutableList(),
                             userActivity = inputs.activity,
@@ -238,9 +238,9 @@ internal class MovieDetailViewModel(
 
     private fun loadVideos() {
         viewModelScope.launch {
-            trailerUrl.value = getMediaVideos(movieId, mediaType)
+            videos.value = getMediaVideos(movieId, mediaType)
                 .getOrDefault(emptyList())
-                .primaryTrailerUrl()
+                .toVideoUiList()
         }
     }
 
@@ -314,7 +314,7 @@ internal class MovieDetailViewModel(
 
     private data class RenderInputs(
         val detailState: DetailState,
-        val trailer: String?,
+        val videos: List<VideoUi>,
         val episodes: List<TvEpisodeUi>,
         val activity: UserActivityUi?,
         val providers: WatchProviderRegion?,
