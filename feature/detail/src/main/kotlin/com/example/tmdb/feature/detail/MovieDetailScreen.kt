@@ -379,13 +379,31 @@ private fun DetailInfo(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(detail.watchProviders) { provider ->
-                        AsyncImage(
-                            model = provider.logoUrl,
-                            contentDescription = provider.name,
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                        )
+                        GlassSurface(
+                            modifier = Modifier.width(82.dp),
+                            contentPadding = PaddingValues(10.dp),
+                            cornerRadius = 14.dp,
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                AsyncImage(
+                                    model = provider.logoUrl,
+                                    contentDescription = provider.name,
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .clip(RoundedCornerShape(8.dp)),
+                                )
+                                Text(
+                                    text = provider.name,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
                     }
                 }
                 Text(

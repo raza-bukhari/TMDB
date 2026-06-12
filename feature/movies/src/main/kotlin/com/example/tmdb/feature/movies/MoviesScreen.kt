@@ -67,6 +67,7 @@ import coil3.compose.AsyncImage
 import com.example.tmdb.core.designsystem.ThemePreviews
 import com.example.tmdb.core.designsystem.component.ErrorState
 import com.example.tmdb.core.designsystem.component.FilterChipPill
+import com.example.tmdb.core.designsystem.component.GlassSurface
 import com.example.tmdb.core.designsystem.component.PosterCard
 import com.example.tmdb.core.designsystem.component.RatingBadge
 import com.example.tmdb.core.designsystem.theme.TMDBTheme
@@ -840,12 +841,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.watchlistContent(
     }
     if (filteredItems.isEmpty()) {
         item {
-            Surface(
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
-                shape = RoundedCornerShape(16.dp),
+            GlassSurface(
                 modifier = Modifier.padding(horizontal = 16.dp),
+                contentPadding = PaddingValues(16.dp),
             ) {
                 Text(
                     text = if (items.isEmpty()) {
@@ -854,7 +852,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.watchlistContent(
                         "No titles match this watchlist filter."
                     },
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(16.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -944,15 +942,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.profileContent(
             ProfileMetricRow(label = "Watching / Completed", value = "$watchingCount / $completedCount")
             ProfileMetricRow(label = "Favorites", value = favoriteCount.toString())
             ProfileMetricRow(label = "Average user rating", value = averageUserRating?.let { String.format("%.1f", it) } ?: "Not rated")
-            Surface(
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
-                shape = RoundedCornerShape(16.dp),
-            ) {
+            GlassSurface(contentPadding = PaddingValues(14.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(14.dp),
                 ) {
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(text = "Theme", style = MaterialTheme.typography.titleMedium)
@@ -971,13 +963,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.profileContent(
                 }
             }
             if (recentNotes.isNotEmpty()) {
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
-                    shape = RoundedCornerShape(16.dp),
-                ) {
-                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                GlassSurface(contentPadding = PaddingValues(14.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(text = "Recent notes", style = MaterialTheme.typography.titleMedium)
                         recentNotes.forEach { item ->
                             Text(
@@ -999,17 +986,13 @@ private fun androidx.compose.foundation.lazy.LazyListScope.profileContent(
 
 @Composable
 private fun ProfileMetricRow(label: String, value: String) {
-    Surface(
-        color = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        shape = RoundedCornerShape(12.dp),
+    GlassSurface(
+        contentPadding = PaddingValues(14.dp),
+        cornerRadius = 12.dp,
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
                 text = label,
