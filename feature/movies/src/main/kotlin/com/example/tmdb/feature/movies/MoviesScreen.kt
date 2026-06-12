@@ -127,6 +127,7 @@ fun MoviesScreen(
         onDiscoverFiltersReset = viewModel::onDiscoverFiltersReset,
         onTabSelected = viewModel::onTabSelected,
         onWatchlistFilterSelected = viewModel::onWatchlistFilterSelected,
+        onWatchlistSortSelected = viewModel::onWatchlistSortSelected,
         onWatchlistToggle = viewModel::onWatchlistToggle,
         onTrendingWindowSelected = viewModel::onTrendingWindowSelected,
         onRetryClick = viewModel::onRetryClicked,
@@ -150,6 +151,7 @@ internal fun MoviesScreenContent(
     onDiscoverFiltersReset: () -> Unit,
     onTabSelected: (MoviesTab) -> Unit,
     onWatchlistFilterSelected: (WatchlistFilter) -> Unit,
+    onWatchlistSortSelected: (WatchlistSort) -> Unit,
     onWatchlistToggle: (MovieListItem) -> Unit,
     onTrendingWindowSelected: (TrendingWindow) -> Unit,
     onRetryClick: () -> Unit,
@@ -182,6 +184,7 @@ internal fun MoviesScreenContent(
                             onDiscoverFiltersReset = onDiscoverFiltersReset,
                             onTabSelected = onTabSelected,
                             onWatchlistFilterSelected = onWatchlistFilterSelected,
+                            onWatchlistSortSelected = onWatchlistSortSelected,
                             onWatchlistToggle = onWatchlistToggle,
                             onTrendingWindowSelected = onTrendingWindowSelected,
                             onMovieClick = onMovieClick,
@@ -218,6 +221,7 @@ private fun HomeFeed(
     onDiscoverFiltersReset: () -> Unit,
     onTabSelected: (MoviesTab) -> Unit,
     onWatchlistFilterSelected: (WatchlistFilter) -> Unit,
+    onWatchlistSortSelected: (WatchlistSort) -> Unit,
     onWatchlistToggle: (MovieListItem) -> Unit,
     onTrendingWindowSelected: (TrendingWindow) -> Unit,
     onMovieClick: (Long, com.example.tmdb.domain.model.MediaType) -> Unit,
@@ -329,8 +333,10 @@ private fun HomeFeed(
                 MoviesTab.WATCHLIST -> watchlistContent(
                     items = state.watchlistItems,
                     selectedFilter = state.selectedWatchlistFilter,
+                    selectedSort = state.selectedWatchlistSort,
                     watchlistKeys = state.watchlistKeys,
                     onFilterSelected = onWatchlistFilterSelected,
+                    onSortSelected = onWatchlistSortSelected,
                     onMovieClick = onMovieClick,
                     onWatchlistToggle = onWatchlistToggle,
                 )
@@ -789,12 +795,14 @@ private fun DiscoverMovieGridRow(
 private fun androidx.compose.foundation.lazy.LazyListScope.watchlistContent(
     items: List<WatchlistItemUi>,
     selectedFilter: WatchlistFilter,
+    selectedSort: WatchlistSort,
     watchlistKeys: Set<MediaKey>,
     onFilterSelected: (WatchlistFilter) -> Unit,
+    onSortSelected: (WatchlistSort) -> Unit,
     onMovieClick: (Long, com.example.tmdb.domain.model.MediaType) -> Unit,
     onWatchlistToggle: (MovieListItem) -> Unit,
 ) {
-    val filteredItems = items.filteredBy(selectedFilter)
+    val filteredItems = items.filteredBy(selectedFilter).sortedBy(selectedSort)
     item {
         Column(
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -816,6 +824,15 @@ private fun androidx.compose.foundation.lazy.LazyListScope.watchlistContent(
                         text = filter.label,
                         selected = filter == selectedFilter,
                         onClick = { onFilterSelected(filter) },
+                    )
+                }
+            }
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(WatchlistSort.entries, key = { it.name }) { sort ->
+                    FilterChipPill(
+                        text = sort.label,
+                        selected = sort == selectedSort,
+                        onClick = { onSortSelected(sort) },
                     )
                 }
             }
@@ -1403,6 +1420,7 @@ private fun MoviesHomePreview() {
             onDiscoverFiltersReset = {},
             onTabSelected = {},
             onWatchlistFilterSelected = {},
+            onWatchlistSortSelected = {},
             onWatchlistToggle = {},
             onTrendingWindowSelected = {},
             onRetryClick = {},

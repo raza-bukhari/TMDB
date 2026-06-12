@@ -138,6 +138,17 @@ class MoviesViewModelTest {
     }
 
     @Test
+    fun `given watchlist sort selected, when observing state, then sort changes`() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.onWatchlistSortSelected(WatchlistSort.RATING)
+
+        viewModel.uiState.test {
+            assertEquals(WatchlistSort.RATING, awaitItem().selectedWatchlistSort)
+        }
+    }
+
+    @Test
     fun `given movie not saved, when watchlist toggled, then repository saves it`() = runTest {
         val viewModel = viewModel()
         val item = movie(550, "Fight Club").toListItem()

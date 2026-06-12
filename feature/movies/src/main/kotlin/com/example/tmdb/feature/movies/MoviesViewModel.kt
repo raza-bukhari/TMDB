@@ -135,6 +135,10 @@ internal class MoviesViewModel(
         _uiState.update { it.copy(selectedWatchlistFilter = filter) }
     }
 
+    fun onWatchlistSortSelected(sort: WatchlistSort) {
+        _uiState.update { it.copy(selectedWatchlistSort = sort) }
+    }
+
     fun onWatchlistToggle(movie: MovieListItem) {
         viewModelScope.launch {
             val id = MovieId(movie.id)

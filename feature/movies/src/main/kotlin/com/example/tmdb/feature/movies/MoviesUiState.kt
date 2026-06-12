@@ -25,6 +25,7 @@ data class MoviesUiState(
     val watchlistMovies: ImmutableList<MovieListItem> = persistentListOf(),
     val watchlistItems: ImmutableList<WatchlistItemUi> = persistentListOf(),
     val selectedWatchlistFilter: WatchlistFilter = WatchlistFilter.ALL,
+    val selectedWatchlistSort: WatchlistSort = WatchlistSort.RECENTLY_ADDED,
     val watchlistKeys: Set<MediaKey> = emptySet(),
     val discoverQuery: String = "",
     val discoverFilters: MovieFilters = MovieFilters(),
@@ -45,6 +46,13 @@ enum class WatchlistFilter(val label: String) {
     WATCHING("Watching"),
     COMPLETED("Completed"),
     PLAN_TO_WATCH("Plan to watch"),
+}
+
+enum class WatchlistSort(val label: String) {
+    RECENTLY_ADDED("Recent"),
+    RATING("Rating"),
+    YEAR("Year"),
+    TITLE("Title"),
 }
 
 enum class TrendingWindow {
@@ -129,6 +137,13 @@ internal fun List<WatchlistItemUi>.filteredBy(filter: WatchlistFilter): List<Wat
     WatchlistFilter.WATCHING -> filter { it.status == WatchlistStatus.WATCHING }
     WatchlistFilter.COMPLETED -> filter { it.status == WatchlistStatus.COMPLETED }
     WatchlistFilter.PLAN_TO_WATCH -> filter { it.status == WatchlistStatus.PLAN_TO_WATCH }
+}
+
+internal fun List<WatchlistItemUi>.sortedBy(sort: WatchlistSort): List<WatchlistItemUi> = when (sort) {
+    WatchlistSort.RECENTLY_ADDED -> sortedByDescending { it.addedAtMillis }
+    WatchlistSort.RATING -> sortedWith(compareByDescending<WatchlistItemUi> { it.userRating ?: it.movie.rating }.thenBy { it.movie.title })
+    WatchlistSort.YEAR -> sortedWith(compareByDescending<WatchlistItemUi> { it.movie.releaseYear?.toIntOrNull() ?: 0 }.thenBy { it.movie.title })
+    WatchlistSort.TITLE -> sortedBy { it.movie.title.lowercase() }
 }
 
 internal fun MovieListItem.toDomainMovie(): Movie = Movie(
