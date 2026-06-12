@@ -7,10 +7,12 @@ import com.example.tmdb.core.testing.MainDispatcherRule
 import com.example.tmdb.domain.model.AppError
 import com.example.tmdb.domain.model.AppException
 import com.example.tmdb.domain.model.ExternalRatings
+import com.example.tmdb.domain.model.MediaVideo
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
 import com.example.tmdb.domain.usecase.AddMovieToWatchlistUseCase
 import com.example.tmdb.domain.usecase.GetExternalRatingsUseCase
+import com.example.tmdb.domain.usecase.GetMediaVideosUseCase
 import com.example.tmdb.domain.usecase.ObserveMovieDetailUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistIdsUseCase
 import com.example.tmdb.domain.usecase.RefreshMovieDetailUseCase
@@ -51,6 +53,7 @@ class MovieDetailViewModelTest {
         observeMovieDetail = ObserveMovieDetailUseCase(repository),
         refreshMovieDetail = RefreshMovieDetailUseCase(repository),
         getExternalRatings = GetExternalRatingsUseCase(repository),
+        getMediaVideos = GetMediaVideosUseCase(repository),
         observeWatchlistIds = ObserveWatchlistIdsUseCase(repository),
         addMovieToWatchlist = AddMovieToWatchlistUseCase(repository),
         removeMovieFromWatchlist = RemoveMovieFromWatchlistUseCase(repository),
@@ -124,6 +127,34 @@ class MovieDetailViewModelTest {
             assertEquals("66/100", ratings.metascore)
         }
         assertEquals(listOf("tt0137523"), repository.externalRatingCalls)
+    }
+
+    @Test
+    fun `given a YouTube trailer exists, when videos load, then detail exposes trailer url`() = runTest {
+        repository.onDetailRefreshCachePopulation = { aDetail }
+        repository.videosResult = Result.success(
+            listOf(
+                MediaVideo(
+                    id = "trailer-1",
+                    name = "Official Trailer",
+                    key = "abc123",
+                    site = "YouTube",
+                    type = "Trailer",
+                    official = true,
+                ),
+            ),
+        )
+
+        viewModel().uiState.test {
+            val state = expectMostRecentItemAfter {
+                (it.content as? MovieDetailContent.Detail)?.detail?.trailerUrl != null
+            }
+
+            assertEquals(
+                "https://www.youtube.com/watch?v=abc123",
+                (state.content as MovieDetailContent.Detail).detail.trailerUrl,
+            )
+        }
     }
 
     @Test

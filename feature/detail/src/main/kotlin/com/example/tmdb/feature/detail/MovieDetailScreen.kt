@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -57,6 +58,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.example.tmdb.core.designsystem.ThemePreviews
 import com.example.tmdb.core.designsystem.component.ErrorState
+import com.example.tmdb.core.designsystem.component.GlassSurface
+import com.example.tmdb.core.designsystem.component.GradientPrimaryButton
 import com.example.tmdb.core.designsystem.component.LoadingState
 import com.example.tmdb.core.designsystem.component.RatingRing
 import com.example.tmdb.core.designsystem.theme.TMDBTheme
@@ -68,6 +71,7 @@ object DetailTestTags {
     const val SCREEN = "detail_screen"
     const val BACK = "detail_back"
     const val WATCHLIST = "detail_watchlist"
+    const val TRAILER = "detail_trailer"
 }
 
 private val HeaderMaxHeight = 300.dp
@@ -81,6 +85,7 @@ fun MovieDetailScreen(
 ) {
     val viewModel: MovieDetailViewModel = koinViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val uriHandler = LocalUriHandler.current
 
     MovieDetailScreenContent(
         state = state,
@@ -88,6 +93,7 @@ fun MovieDetailScreen(
         onMovieClick = onMovieClick,
         onRetryClick = viewModel::onRetryClicked,
         onWatchlistToggle = viewModel::onWatchlistToggle,
+        onTrailerClick = { url -> uriHandler.openUri(url) },
         modifier = modifier,
     )
 }
@@ -99,6 +105,7 @@ internal fun MovieDetailScreenContent(
     onMovieClick: (Long) -> Unit,
     onRetryClick: () -> Unit,
     onWatchlistToggle: () -> Unit,
+    onTrailerClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(modifier = modifier.fillMaxSize()) {
@@ -109,7 +116,7 @@ internal fun MovieDetailScreenContent(
                     ErrorState(message = content.error.toUserMessage(), onRetryClick = onRetryClick)
                     BackButton(onBackClick, scrim = false)
                 }
-                is MovieDetailContent.Detail -> CollapsingDetail(content.detail, onBackClick, onMovieClick, onWatchlistToggle)
+                is MovieDetailContent.Detail -> CollapsingDetail(content.detail, onBackClick, onMovieClick, onWatchlistToggle, onTrailerClick)
             }
         }
     }
@@ -121,6 +128,7 @@ private fun CollapsingDetail(
     onBackClick: () -> Unit,
     onMovieClick: (Long) -> Unit,
     onWatchlistToggle: () -> Unit,
+    onTrailerClick: (String) -> Unit,
 ) {
     val scroll = rememberScrollState()
     val density = LocalDensity.current
@@ -162,7 +170,7 @@ private fun CollapsingDetail(
                 .verticalScroll(scroll),
         ) {
             Spacer(Modifier.height(HeaderMaxHeight))
-            DetailInfo(detail, onMovieClick, onWatchlistToggle, modifier = Modifier.heightIn(min = infoMinHeight))
+            DetailInfo(detail, onMovieClick, onWatchlistToggle, onTrailerClick, modifier = Modifier.heightIn(min = infoMinHeight))
         }
 
         Box(
@@ -202,6 +210,7 @@ private fun DetailInfo(
     detail: MovieDetailUi,
     onMovieClick: (Long) -> Unit,
     onWatchlistToggle: () -> Unit,
+    onTrailerClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -229,6 +238,22 @@ private fun DetailInfo(
             }
             if (detail.externalRatings.hasAny) {
                 ExternalRatingsRow(detail.externalRatings)
+            }
+            if (detail.trailerUrl != null) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    GradientPrimaryButton(
+                        text = "Trailer",
+                        onClick = { onTrailerClick(detail.trailerUrl) },
+                        modifier = Modifier.testTag(DetailTestTags.TRAILER),
+                    )
+                    GlassSurface(cornerRadius = 999.dp, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)) {
+                        Text(
+                            text = "Official video",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
             detail.tagline?.let {
                 Text(
@@ -531,6 +556,7 @@ private fun MovieDetailPreview() {
             onMovieClick = {},
             onRetryClick = {},
             onWatchlistToggle = {},
+            onTrailerClick = {},
         )
     }
 }

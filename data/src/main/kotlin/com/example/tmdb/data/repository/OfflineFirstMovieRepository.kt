@@ -12,6 +12,7 @@ import com.example.tmdb.core.database.WatchlistDao
 import com.example.tmdb.core.network.OmdbApi
 import com.example.tmdb.core.network.OmdbConfig
 import com.example.tmdb.core.network.TmdbApi
+import com.example.tmdb.core.network.dto.VideoDto
 import com.example.tmdb.core.network.tmdbCall
 import com.example.tmdb.data.mapper.toDomain
 import com.example.tmdb.data.mapper.toEntity
@@ -20,6 +21,7 @@ import com.example.tmdb.domain.model.DiscoverMovieFilters
 import com.example.tmdb.domain.model.ExternalRatings
 import com.example.tmdb.domain.model.HomeList
 import com.example.tmdb.domain.model.MediaType
+import com.example.tmdb.domain.model.MediaVideo
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieCategory
 import com.example.tmdb.domain.model.MovieDetail
@@ -125,6 +127,24 @@ internal class OfflineFirstMovieRepository(
                 Result.success(ExternalRatings())
             } else {
                 tmdbCall { omdbApi.ratingsByImdbId(imdbId) }
+                    .map { it.toDomain() }
+            }
+        }
+
+    override suspend fun videos(id: MovieId, mediaType: MediaType): Result<List<MediaVideo>> =
+        withContext(dispatchers.io) {
+            tmdbCall {
+                when (mediaType) {
+                    MediaType.MOVIE -> api.movieVideos(id.value)
+                    MediaType.TV -> api.tvVideos(id.value)
+                }
+            }.map { response ->
+                response.results
+                    .filter { it.site.equals("YouTube", ignoreCase = true) }
+                    .sortedWith(
+                        compareByDescending<VideoDto> { it.official }
+                            .thenBy { if (it.type.equals("Trailer", ignoreCase = true)) 0 else 1 },
+                    )
                     .map { it.toDomain() }
             }
         }

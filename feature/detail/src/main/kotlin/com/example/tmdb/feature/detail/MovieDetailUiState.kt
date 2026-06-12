@@ -5,6 +5,7 @@ import com.example.tmdb.domain.model.AppError
 import com.example.tmdb.domain.model.ExternalRatings
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.Movie
+import com.example.tmdb.domain.model.MediaVideo
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 
@@ -61,6 +62,7 @@ data class MovieDetailUi(
     val producers: ImmutableList<String>,
     val similarMovies: ImmutableList<MovieSummaryUi>,
     val watchProviders: ImmutableList<WatchProviderUi>,
+    val trailerUrl: String? = null,
     val externalRatings: ExternalRatingsUi = ExternalRatingsUi(),
     val isWatchlisted: Boolean = false,
 )
@@ -119,9 +121,15 @@ internal fun MovieDetail.toUi(
             logoUrl = provider.logoPath?.let { LOGO_BASE + it }
         )
     }.toImmutableList(),
+    trailerUrl = null,
     externalRatings = externalRatings.toUi(),
     isWatchlisted = isWatchlisted,
 )
+
+internal fun List<MediaVideo>.primaryTrailerUrl(): String? =
+    firstOrNull { it.type.equals("Trailer", ignoreCase = true) && it.official }?.youtubeUrl
+        ?: firstOrNull { it.type.equals("Trailer", ignoreCase = true) }?.youtubeUrl
+        ?: firstNotNullOfOrNull { it.youtubeUrl }
 
 private fun ExternalRatings.toUi(): ExternalRatingsUi = ExternalRatingsUi(
     imdb = imdb?.let { "$it/10" },

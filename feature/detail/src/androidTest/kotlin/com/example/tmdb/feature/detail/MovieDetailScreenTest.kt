@@ -27,7 +27,13 @@ class MovieDetailScreenTest {
         releaseYear = "1999",
         runtime = "2h 19m",
         rating = 8.4,
+        certification = "R",
         genres = persistentListOf("Drama", "Thriller"),
+        cast = persistentListOf(),
+        directors = persistentListOf("David Fincher"),
+        producers = persistentListOf(),
+        similarMovies = persistentListOf(),
+        watchProviders = persistentListOf(),
     )
 
     @Test
@@ -39,6 +45,7 @@ class MovieDetailScreenTest {
                     onBackClick = {},
                     onMovieClick = {},
                     onRetryClick = {},
+                    onTrailerClick = {},
                     onWatchlistToggle = {},
                 )
             }
@@ -60,6 +67,7 @@ class MovieDetailScreenTest {
                     onBackClick = {},
                     onMovieClick = {},
                     onRetryClick = { retried = true },
+                    onTrailerClick = {},
                     onWatchlistToggle = {},
                 )
             }
@@ -79,6 +87,7 @@ class MovieDetailScreenTest {
                     onBackClick = { back = true },
                     onMovieClick = {},
                     onRetryClick = {},
+                    onTrailerClick = {},
                     onWatchlistToggle = {},
                 )
             }
@@ -86,5 +95,29 @@ class MovieDetailScreenTest {
 
         composeRule.onNodeWithTag(DetailTestTags.BACK).performClick()
         assertTrue(back)
+    }
+
+    @Test
+    fun givenTrailerUrl_whenTrailerClicked_thenCallbackFires() {
+        var openedUrl: String? = null
+        composeRule.setContent {
+            TMDBTheme {
+                MovieDetailScreenContent(
+                    state = MovieDetailUiState(
+                        content = MovieDetailContent.Detail(
+                            detail.copy(trailerUrl = "https://www.youtube.com/watch?v=abc123"),
+                        ),
+                    ),
+                    onBackClick = {},
+                    onMovieClick = {},
+                    onRetryClick = {},
+                    onTrailerClick = { openedUrl = it },
+                    onWatchlistToggle = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(DetailTestTags.TRAILER).performClick()
+        assertTrue(openedUrl == "https://www.youtube.com/watch?v=abc123")
     }
 }

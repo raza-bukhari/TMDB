@@ -13,6 +13,7 @@ import com.example.tmdb.domain.model.MovieId
 import com.example.tmdb.domain.model.appErrorOrNull
 import com.example.tmdb.domain.usecase.AddMovieToWatchlistUseCase
 import com.example.tmdb.domain.usecase.GetExternalRatingsUseCase
+import com.example.tmdb.domain.usecase.GetMediaVideosUseCase
 import com.example.tmdb.domain.usecase.ObserveMovieDetailUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistIdsUseCase
 import com.example.tmdb.domain.usecase.RefreshMovieDetailUseCase
@@ -31,6 +32,7 @@ internal class MovieDetailViewModel(
     observeMovieDetail: ObserveMovieDetailUseCase,
     private val refreshMovieDetail: RefreshMovieDetailUseCase,
     private val getExternalRatings: GetExternalRatingsUseCase,
+    private val getMediaVideos: GetMediaVideosUseCase,
     private val observeWatchlistIds: ObserveWatchlistIdsUseCase,
     private val addMovieToWatchlist: AddMovieToWatchlistUseCase,
     private val removeMovieFromWatchlist: RemoveMovieFromWatchlistUseCase,
@@ -51,22 +53,35 @@ internal class MovieDetailViewModel(
     private val isRefreshing = MutableStateFlow(true)
     private val refreshError = MutableStateFlow<AppError?>(null)
     private val externalRatings = MutableStateFlow(ExternalRatings())
+    private val trailerUrl = MutableStateFlow<String?>(null)
     private var latestDetail: MovieDetail? = null
 
-    val uiState: StateFlow<MovieDetailUiState> =
+    private val detailState =
         combine(detailFlow, isRefreshing, refreshError, externalRatings, watchlistIds) { detail, refreshing, error, ratings, savedIds ->
+            DetailState(
+                detail = detail,
+                refreshing = refreshing,
+                error = error,
+                ratings = ratings,
+                savedIds = savedIds,
+            )
+        }
+
+    val uiState: StateFlow<MovieDetailUiState> =
+        combine(detailState, trailerUrl) { detailState, trailer ->
+            val detail = detailState.detail
             latestDetail = detail
             MovieDetailUiState(
-                isRefreshing = refreshing,
+                isRefreshing = detailState.refreshing,
                 content = when {
                     detail != null -> MovieDetailContent.Detail(
                         detail.toUi(
-                            externalRatings = ratings,
-                            isWatchlisted = detail.id in savedIds,
-                        ),
+                            externalRatings = detailState.ratings,
+                            isWatchlisted = detail.id in detailState.savedIds,
+                        ).copy(trailerUrl = trailer),
                     )
-                    refreshing -> MovieDetailContent.Loading
-                    error != null -> MovieDetailContent.Error(error)
+                    detailState.refreshing -> MovieDetailContent.Loading
+                    detailState.error != null -> MovieDetailContent.Error(detailState.error)
                     else -> MovieDetailContent.Loading
                 },
             )
@@ -80,6 +95,7 @@ internal class MovieDetailViewModel(
     init {
         refresh()
         observeExternalRatings()
+        loadVideos()
     }
 
     fun onRetryClicked() = refresh()
@@ -118,4 +134,20 @@ internal class MovieDetailViewModel(
                 }
         }
     }
+
+    private fun loadVideos() {
+        viewModelScope.launch {
+            trailerUrl.value = getMediaVideos(movieId, mediaType)
+                .getOrDefault(emptyList())
+                .primaryTrailerUrl()
+        }
+    }
+
+    private data class DetailState(
+        val detail: MovieDetail?,
+        val refreshing: Boolean,
+        val error: AppError?,
+        val ratings: ExternalRatings,
+        val savedIds: Set<MovieId>,
+    )
 }

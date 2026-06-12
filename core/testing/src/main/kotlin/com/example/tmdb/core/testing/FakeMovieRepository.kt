@@ -5,6 +5,7 @@ import com.example.tmdb.domain.model.DiscoverMovieFilters
 import com.example.tmdb.domain.model.ExternalRatings
 import com.example.tmdb.domain.model.HomeList
 import com.example.tmdb.domain.model.MediaType
+import com.example.tmdb.domain.model.MediaVideo
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieCategory
 import com.example.tmdb.domain.model.MovieDetail
@@ -124,4 +125,8 @@ class FakeMovieRepository : MovieRepository {
         externalRatingCalls += imdbId
         return externalRatingsResult
     }
+
+    var videosResult: Result<List<MediaVideo>> = Result.success(emptyList())
+
+    override suspend fun videos(id: MovieId, mediaType: MediaType): Result<List<MediaVideo>> = videosResult
 }

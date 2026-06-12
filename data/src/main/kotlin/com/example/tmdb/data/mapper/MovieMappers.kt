@@ -9,11 +9,13 @@ import com.example.tmdb.core.network.dto.MovieDetailDto
 import com.example.tmdb.core.network.dto.MovieDto
 import com.example.tmdb.core.network.dto.OmdbResponseDto
 import com.example.tmdb.core.network.dto.PagedResponseDto
+import com.example.tmdb.core.network.dto.VideoDto
 import com.example.tmdb.core.network.dto.WatchProviderDto
 import com.example.tmdb.domain.model.CastMember
 import com.example.tmdb.domain.model.CrewMember
 import com.example.tmdb.domain.model.ExternalRatings
 import com.example.tmdb.domain.model.MediaType
+import com.example.tmdb.domain.model.MediaVideo
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
@@ -116,6 +118,15 @@ internal fun WatchProviderDto.toDomain(): WatchProvider = WatchProvider(
     id = providerId,
     name = providerName,
     logoPath = logoPath
+)
+
+internal fun VideoDto.toDomain(): MediaVideo = MediaVideo(
+    id = id,
+    name = name,
+    key = key,
+    site = site,
+    type = type,
+    official = official,
 )
 
 // Search results skip Room entirely (D-006), so DTOs map straight to domain.

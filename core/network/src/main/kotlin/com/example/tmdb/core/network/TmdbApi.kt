@@ -3,6 +3,7 @@ package com.example.tmdb.core.network
 import com.example.tmdb.core.network.dto.MovieDetailDto
 import com.example.tmdb.core.network.dto.MovieDto
 import com.example.tmdb.core.network.dto.PagedResponseDto
+import com.example.tmdb.core.network.dto.VideosResponseDto
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
@@ -46,6 +47,16 @@ interface TmdbApi {
         @Path("series_id") seriesId: Long,
         @Query("append_to_response") appendToResponse: String = "credits,content_ratings,similar,watch/providers",
     ): MovieDetailDto
+
+    @GET("movie/{movie_id}/videos")
+    suspend fun movieVideos(
+        @Path("movie_id") movieId: Long,
+    ): VideosResponseDto
+
+    @GET("tv/{series_id}/videos")
+    suspend fun tvVideos(
+        @Path("series_id") seriesId: Long,
+    ): VideosResponseDto
 
     @GET("search/movie")
     suspend fun searchMovies(

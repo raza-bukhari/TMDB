@@ -5,6 +5,7 @@ import com.example.tmdb.domain.model.DiscoverMovieFilters
 import com.example.tmdb.domain.model.ExternalRatings
 import com.example.tmdb.domain.model.HomeList
 import com.example.tmdb.domain.model.MediaType
+import com.example.tmdb.domain.model.MediaVideo
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieCategory
 import com.example.tmdb.domain.model.MovieDetail
@@ -64,6 +65,9 @@ class FakeRepo : MovieRepository {
         lastImdbId = imdbId
         return externalRatingsResult
     }
+
+    override suspend fun videos(id: MovieId, mediaType: MediaType): Result<List<MediaVideo>> =
+        Result.success(emptyList())
 
     override fun observeWatchlist(): Flow<List<Movie>> = watchlist
 
