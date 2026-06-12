@@ -288,6 +288,32 @@ private fun HomeFeed(
                             onWatchlistToggle = onWatchlistToggle,
                         )
                     }
+                    personalizedSection(
+                        title = "Continue watching",
+                        subtitle = "Titles currently marked as watching",
+                        items = state.watchlistItems.filter {
+                            it.status == com.example.tmdb.domain.model.WatchlistStatus.WATCHING
+                        }.map { it.movie },
+                        watchlistIds = state.watchlistIds,
+                        onMovieClick = onMovieClick,
+                        onWatchlistToggle = onWatchlistToggle,
+                    )
+                    personalizedSection(
+                        title = "Because you saved",
+                        subtitle = "Your local queue, ready to resume",
+                        items = state.watchlistItems.take(10).map { it.movie },
+                        watchlistIds = state.watchlistIds,
+                        onMovieClick = onMovieClick,
+                        onWatchlistToggle = onWatchlistToggle,
+                    )
+                    personalizedSection(
+                        title = "More like your favorites",
+                        subtitle = "Favorites from your local profile",
+                        items = state.watchlistItems.filter { it.favorite }.map { it.movie },
+                        watchlistIds = state.watchlistIds,
+                        onMovieClick = onMovieClick,
+                        onWatchlistToggle = onWatchlistToggle,
+                    )
                 }
                 MoviesTab.DISCOVER -> discoverContent(
                     discoverResults = discoverResults,
@@ -1052,6 +1078,55 @@ private fun HeroMetaChip(text: String) {
             style = MaterialTheme.typography.labelMedium,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
         )
+    }
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.personalizedSection(
+    title: String,
+    subtitle: String,
+    items: List<MovieListItem>,
+    watchlistIds: Set<MovieId>,
+    onMovieClick: (Long, com.example.tmdb.domain.model.MediaType) -> Unit,
+    onWatchlistToggle: (MovieListItem) -> Unit,
+) {
+    if (items.isEmpty()) return
+    item {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(4.dp)
+                        .height(42.dp)
+                        .background(MaterialTheme.colorScheme.secondary, RoundedCornerShape(4.dp)),
+                )
+                Spacer(Modifier.width(10.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(text = title, style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                items(items, key = { "${it.mediaType}:${it.id}" }) { movie ->
+                    HomeMovieCard(
+                        movie = movie,
+                        isWatchlisted = MovieId(movie.id) in watchlistIds,
+                        onMovieClick = onMovieClick,
+                        onWatchlistToggle = onWatchlistToggle,
+                    )
+                }
+            }
+        }
     }
 }
 
