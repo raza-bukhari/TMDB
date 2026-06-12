@@ -56,7 +56,7 @@ data class MovieFilters(
     val fromYear: Int = MIN_FILTER_YEAR,
     val toYear: Int = MAX_FILTER_YEAR,
     val genres: Set<MovieGenre> = emptySet(),
-    val mediaType: MediaType = MediaType.MOVIE,
+    val mediaType: MediaType? = null,
     val language: LanguageFilter = LanguageFilter.ANY,
     val runtime: RuntimeFilter = RuntimeFilter.ANY,
     val watchProvider: WatchProviderFilter = WatchProviderFilter.ANY,
@@ -69,7 +69,7 @@ data class MovieFilters(
             (if (minRating > 0f) 1 else 0) +
             (if (fromYear > MIN_FILTER_YEAR || toYear < MAX_FILTER_YEAR) 1 else 0) +
             (if (genres.isNotEmpty()) 1 else 0) +
-            (if (mediaType != MediaType.MOVIE) 1 else 0) +
+            (if (mediaType != null) 1 else 0) +
             (if (language != LanguageFilter.ANY) 1 else 0) +
             (if (runtime != RuntimeFilter.ANY) 1 else 0) +
             (if (watchProvider != WatchProviderFilter.ANY) 1 else 0) +
@@ -123,7 +123,7 @@ internal fun MovieListItem.matches(query: String, filters: MovieFilters): Boolea
     val ratingOk = rating >= filters.minRating
     val yearOk = if (year == null) yearWindowFull else year in filters.fromYear..filters.toYear
     val genreOk = genreIds.isEmpty() || this.genreIds.any { it in genreIds }
-    val mediaTypeOk = mediaType == filters.mediaType
+    val mediaTypeOk = filters.mediaType == null || mediaType == filters.mediaType
     return queryOk && ratingOk && yearOk && genreOk && mediaTypeOk
 }
 
@@ -160,7 +160,11 @@ internal fun MovieFilters.toDiscoverMovieFilters(): DiscoverMovieFilters = Disco
 )
 
 internal fun MovieFilters.activeLabels(): List<String> = buildList {
-    if (mediaType != MediaType.MOVIE) add("Series")
+    when (mediaType) {
+        MediaType.MOVIE -> add("Movies")
+        MediaType.TV -> add("Series")
+        null -> Unit
+    }
     if (sort != MovieSort.DEFAULT) add(sort.label)
     if (minRating > 0f) add("${"%.1f".format(minRating)}+")
     if (fromYear > MIN_FILTER_YEAR || toYear < MAX_FILTER_YEAR) add("$fromYear-$toYear")

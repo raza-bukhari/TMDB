@@ -33,6 +33,7 @@ class MovieDetailScreenTest {
         certification = "R",
         genres = persistentListOf("Drama", "Thriller"),
         seasons = persistentListOf(),
+        selectedSeasonNumber = null,
         episodes = persistentListOf(),
         lastEpisode = null,
         nextEpisode = null,
@@ -59,6 +60,7 @@ class MovieDetailScreenTest {
                     onFavoriteToggle = {},
                     onUserRatingSelected = {},
                     onNotesChanged = {},
+                    onSeasonSelected = {},
                 )
             }
         }
@@ -86,6 +88,7 @@ class MovieDetailScreenTest {
                     onFavoriteToggle = {},
                     onUserRatingSelected = {},
                     onNotesChanged = {},
+                    onSeasonSelected = {},
                 )
             }
         }
@@ -111,6 +114,7 @@ class MovieDetailScreenTest {
                     onFavoriteToggle = {},
                     onUserRatingSelected = {},
                     onNotesChanged = {},
+                    onSeasonSelected = {},
                 )
             }
         }
@@ -140,6 +144,7 @@ class MovieDetailScreenTest {
                     onFavoriteToggle = {},
                     onUserRatingSelected = {},
                     onNotesChanged = {},
+                    onSeasonSelected = {},
                 )
             }
         }

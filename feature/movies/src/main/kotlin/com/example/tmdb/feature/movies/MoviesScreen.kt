@@ -443,7 +443,7 @@ private fun Hero(
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = "Find what to watch from trending, popular, theatrical, top rated, and upcoming movies.",
+                text = "Find what to watch from trending, popular, theatrical, top rated, movies, and series.",
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.White.copy(alpha = 0.9f),
                 maxLines = 2,
@@ -465,7 +465,7 @@ private fun InlineSearchBar(
     onActionClick: () -> Unit,
     actionTestTag: String,
     searchFieldTestTag: String = MoviesTestTags.SEARCH_FIELD,
-    placeholder: String = "Search movies",
+    placeholder: String = "Search movies and series",
     clearContentDescription: String = "Clear search",
 ) {
     Surface(
@@ -577,7 +577,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.searchResultsContent(
         searchResults.loadState.refresh is LoadState.NotLoading && searchResults.itemCount == 0 -> {
             item {
                 Text(
-                    text = "No movies found.",
+                    text = "No movies or series found.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
@@ -656,7 +656,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.discoverContent(
         discoverResults.loadState.refresh is LoadState.NotLoading && discoverResults.itemCount == 0 -> {
             item {
                 Text(
-                    text = if (query.isBlank()) "No movies match these filters." else "No movies found.",
+                    text = if (query.isBlank()) "No movies or series match these filters." else "No movies or series found.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
@@ -718,9 +718,9 @@ private fun DiscoverHeader(
         Text(text = "Discover", style = MaterialTheme.typography.headlineSmall)
         Text(
             text = if (query.isBlank()) {
-                "Browse TMDB's full movie catalog. Loaded $loadedCount so far."
+                "Browse TMDB's movie and series catalog. Loaded $loadedCount so far."
             } else {
-                "Searching TMDB's full movie catalog. Loaded $loadedCount results so far."
+                "Searching TMDB movies and series. Loaded $loadedCount results so far."
             },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -732,7 +732,7 @@ private fun DiscoverHeader(
             onActionClick = { showFilters = true },
             actionTestTag = MoviesTestTags.DISCOVER_FILTERS,
             searchFieldTestTag = MoviesTestTags.DISCOVER_SEARCH_FIELD,
-            placeholder = "Search movies",
+            placeholder = "Search movies and series",
             clearContentDescription = "Clear Discover search",
         )
         val activeLabels = filters.activeLabels()

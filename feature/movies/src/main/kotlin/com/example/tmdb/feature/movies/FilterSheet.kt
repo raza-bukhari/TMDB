@@ -72,6 +72,11 @@ internal fun FilterSheet(
             Section("Content") {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
+                        selected = filters.mediaType == null,
+                        onClick = { onFiltersChanged(filters.copy(mediaType = null)) },
+                        label = { Text("All") },
+                    )
+                    FilterChip(
                         selected = filters.mediaType == MediaType.MOVIE,
                         onClick = { onFiltersChanged(filters.copy(mediaType = MediaType.MOVIE)) },
                         label = { Text("Movies") },

@@ -76,6 +76,7 @@ internal class MovieDetailViewModel(
     private val externalRatings = MutableStateFlow(ExternalRatings())
     private val trailerUrl = MutableStateFlow<String?>(null)
     private val watchProviderRegion = MutableStateFlow<WatchProviderRegion?>(null)
+    private val selectedSeasonNumber = MutableStateFlow<Int?>(null)
     private val seasonEpisodes = MutableStateFlow<List<TvEpisodeUi>>(emptyList())
     private var latestDetail: MovieDetail? = null
     private var loadedSeasonNumber: Int? = null
@@ -91,26 +92,44 @@ internal class MovieDetailViewModel(
             )
         }
 
+    private val renderInputs =
+        combine(
+            detailState,
+            trailerUrl,
+            seasonEpisodes,
+            userActivity,
+            watchProviderRegion,
+        ) { detailState, trailer, episodes, activity, providers ->
+            RenderInputs(
+                detailState = detailState,
+                trailer = trailer,
+                episodes = episodes,
+                activity = activity,
+                providers = providers,
+            )
+        }
+
     val uiState: StateFlow<MovieDetailUiState> =
-        combine(detailState, trailerUrl, seasonEpisodes, userActivity, watchProviderRegion) { detailState, trailer, episodes, activity, providers ->
-            val detail = detailState.detail
+        combine(renderInputs, selectedSeasonNumber) { inputs, seasonNumber ->
+            val detail = inputs.detailState.detail
             latestDetail = detail
             MovieDetailUiState(
-                isRefreshing = detailState.refreshing,
+                isRefreshing = inputs.detailState.refreshing,
                 content = when {
                     detail != null -> MovieDetailContent.Detail(
                         detail.toUi(
-                            externalRatings = detailState.ratings,
-                            isWatchlisted = detail.mediaKey in detailState.savedKeys,
-                            watchProvidersOverride = providers?.displayProviders,
+                            externalRatings = inputs.detailState.ratings,
+                            isWatchlisted = detail.mediaKey in inputs.detailState.savedKeys,
+                            watchProvidersOverride = inputs.providers?.displayProviders,
                         ).copy(
-                            trailerUrl = trailer,
-                            episodes = episodes.toImmutableList(),
-                            userActivity = activity,
+                            trailerUrl = inputs.trailer,
+                            selectedSeasonNumber = seasonNumber ?: detail.seasons.firstOrNull()?.seasonNumber,
+                            episodes = inputs.episodes.toImmutableList(),
+                            userActivity = inputs.activity,
                         ),
                     )
-                    detailState.refreshing -> MovieDetailContent.Loading
-                    detailState.error != null -> MovieDetailContent.Error(detailState.error)
+                    inputs.detailState.refreshing -> MovieDetailContent.Loading
+                    inputs.detailState.error != null -> MovieDetailContent.Error(inputs.detailState.error)
                     else -> MovieDetailContent.Loading
                 },
             )
@@ -124,7 +143,7 @@ internal class MovieDetailViewModel(
     init {
         refresh()
         observeExternalRatings()
-        observeSeasonEpisodes()
+        observeInitialSeason()
         loadVideos()
         loadWatchProviders()
     }
@@ -156,6 +175,12 @@ internal class MovieDetailViewModel(
 
     fun onNotesChanged(notes: String) {
         updateActivity { it.copy(notes = notes) }
+    }
+
+    fun onSeasonSelected(seasonNumber: Int) {
+        if (mediaType != MediaType.TV) return
+        selectedSeasonNumber.value = seasonNumber
+        loadSeasonEpisodes(seasonNumber)
     }
 
     private fun refresh() {
@@ -196,21 +221,37 @@ internal class MovieDetailViewModel(
         }
     }
 
-    private fun observeSeasonEpisodes() {
+    private fun observeInitialSeason() {
         viewModelScope.launch {
             detailFlow
                 .filterNotNull()
-                .map { detail -> detail.seasons.firstOrNull()?.seasonNumber }
+                .map { detail ->
+                    val selected = selectedSeasonNumber.value
+                    if (selected != null && detail.seasons.any { it.seasonNumber == selected }) {
+                        selected
+                    } else {
+                        detail.seasons.firstOrNull()?.seasonNumber
+                    }
+                }
                 .distinctUntilChanged()
                 .collect { seasonNumber ->
-                    if (mediaType != MediaType.TV || seasonNumber == null || loadedSeasonNumber == seasonNumber) return@collect
-                    loadedSeasonNumber = seasonNumber
-                    seasonEpisodes.value = getTvSeason(movieId, seasonNumber)
-                        .getOrNull()
-                        ?.episodes
-                        ?.map { it.toUi() }
-                        .orEmpty()
+                    if (mediaType != MediaType.TV || seasonNumber == null) return@collect
+                    selectedSeasonNumber.value = seasonNumber
+                    loadSeasonEpisodes(seasonNumber)
                 }
+        }
+    }
+
+    private fun loadSeasonEpisodes(seasonNumber: Int) {
+        if (loadedSeasonNumber == seasonNumber) return
+        loadedSeasonNumber = seasonNumber
+        viewModelScope.launch {
+            seasonEpisodes.value = emptyList()
+            seasonEpisodes.value = getTvSeason(movieId, seasonNumber)
+                .getOrNull()
+                ?.episodes
+                ?.map { it.toUi() }
+                .orEmpty()
         }
     }
 
@@ -240,6 +281,14 @@ internal class MovieDetailViewModel(
         val error: AppError?,
         val ratings: ExternalRatings,
         val savedKeys: Set<MediaKey>,
+    )
+
+    private data class RenderInputs(
+        val detailState: DetailState,
+        val trailer: String?,
+        val episodes: List<TvEpisodeUi>,
+        val activity: UserActivityUi?,
+        val providers: WatchProviderRegion?,
     )
 }
 

@@ -184,8 +184,13 @@ class FakeMovieRepository : MovieRepository {
             voteAverage = 0.0,
         ),
     )
+    val tvSeasonResults = mutableMapOf<Int, TvSeason>()
+    val tvSeasonCalls = mutableListOf<Int>()
 
-    override suspend fun tvSeason(seriesId: MovieId, seasonNumber: Int): Result<TvSeason> = tvSeasonResult
+    override suspend fun tvSeason(seriesId: MovieId, seasonNumber: Int): Result<TvSeason> {
+        tvSeasonCalls += seasonNumber
+        return tvSeasonResults[seasonNumber]?.let { Result.success(it) } ?: tvSeasonResult
+    }
 
     var tvEpisodeResult: Result<TvEpisode> = Result.success(
         TvEpisode(

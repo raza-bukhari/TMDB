@@ -2,7 +2,9 @@ package com.example.tmdb.data.repository
 
 import androidx.paging.PagingSource
 import com.example.tmdb.core.network.TmdbApi
+import com.example.tmdb.domain.model.DiscoverMovieFilters
 import com.example.tmdb.domain.model.AppError
+import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.model.MovieId
 import com.example.tmdb.domain.model.asAppError
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -69,5 +71,43 @@ class SearchMoviesRepositoryTest {
         ) as PagingSource.LoadResult.Error
 
         assertEquals(AppError.RateLimited, result.throwable.asAppError())
+    }
+
+    @Test
+    fun `given default discover filters, when loading, then movies and series are returned`() = runTest {
+        server.enqueue(MockResponse.Builder().code(200).body(fixture("popular_page_1.json")).build())
+        server.enqueue(
+            MockResponse.Builder().code(200).body(
+                """
+                {
+                  "page": 1,
+                  "results": [
+                    {
+                      "backdrop_path": "/tv-backdrop.jpg",
+                      "first_air_date": "2008-01-20",
+                      "genre_ids": [18],
+                      "id": 1396,
+                      "name": "Breaking Bad",
+                      "overview": "A chemistry teacher changes lanes.",
+                      "poster_path": "/tv-poster.jpg",
+                      "vote_average": 8.9,
+                      "vote_count": 15000
+                    }
+                  ],
+                  "total_pages": 1,
+                  "total_results": 1
+                }
+                """.trimIndent(),
+            ).build(),
+        )
+
+        val result = DiscoverPagingSource(api, DiscoverMovieFilters()).load(
+            PagingSource.LoadParams.Refresh(key = 1, loadSize = 20, placeholdersEnabled = false),
+        ) as PagingSource.LoadResult.Page
+
+        assertEquals(listOf(MediaType.MOVIE, MediaType.MOVIE, MediaType.MOVIE, MediaType.TV), result.data.map { it.mediaType })
+        assertEquals("Breaking Bad", result.data.last().title)
+        assertEquals("/discover/movie", server.takeRequest().url.encodedPath)
+        assertEquals("/discover/tv", server.takeRequest().url.encodedPath)
     }
 }

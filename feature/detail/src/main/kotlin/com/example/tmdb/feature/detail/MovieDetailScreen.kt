@@ -104,6 +104,7 @@ fun MovieDetailScreen(
         onFavoriteToggle = viewModel::onFavoriteToggle,
         onUserRatingSelected = viewModel::onUserRatingSelected,
         onNotesChanged = viewModel::onNotesChanged,
+        onSeasonSelected = viewModel::onSeasonSelected,
         modifier = modifier,
     )
 }
@@ -121,6 +122,7 @@ internal fun MovieDetailScreenContent(
     onFavoriteToggle: () -> Unit,
     onUserRatingSelected: (Double?) -> Unit,
     onNotesChanged: (String) -> Unit,
+    onSeasonSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(modifier = modifier.fillMaxSize()) {
@@ -142,6 +144,7 @@ internal fun MovieDetailScreenContent(
                     onFavoriteToggle = onFavoriteToggle,
                     onUserRatingSelected = onUserRatingSelected,
                     onNotesChanged = onNotesChanged,
+                    onSeasonSelected = onSeasonSelected,
                 )
             }
         }
@@ -160,6 +163,7 @@ private fun CollapsingDetail(
     onFavoriteToggle: () -> Unit,
     onUserRatingSelected: (Double?) -> Unit,
     onNotesChanged: (String) -> Unit,
+    onSeasonSelected: (Int) -> Unit,
 ) {
     val scroll = rememberScrollState()
     val density = LocalDensity.current
@@ -211,6 +215,7 @@ private fun CollapsingDetail(
                 onFavoriteToggle = onFavoriteToggle,
                 onUserRatingSelected = onUserRatingSelected,
                 onNotesChanged = onNotesChanged,
+                onSeasonSelected = onSeasonSelected,
                 modifier = Modifier.heightIn(min = infoMinHeight),
             )
         }
@@ -258,6 +263,7 @@ private fun DetailInfo(
     onFavoriteToggle: () -> Unit,
     onUserRatingSelected: (Double?) -> Unit,
     onNotesChanged: (String) -> Unit,
+    onSeasonSelected: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -352,11 +358,18 @@ private fun DetailInfo(
         )
 
         if (detail.seasons.isNotEmpty()) {
-            SeasonsSection(detail.seasons)
+            SeasonsSection(
+                seasons = detail.seasons,
+                selectedSeasonNumber = detail.selectedSeasonNumber,
+                onSeasonSelected = onSeasonSelected,
+            )
         }
 
         if (detail.episodes.isNotEmpty()) {
-            EpisodesSection(detail.episodes)
+            EpisodesSection(
+                episodes = detail.episodes,
+                selectedSeasonNumber = detail.selectedSeasonNumber,
+            )
         }
 
         if (detail.lastEpisode != null || detail.nextEpisode != null) {
@@ -618,7 +631,11 @@ private fun SeriesStatsRow(detail: MovieDetailUi) {
 }
 
 @Composable
-private fun SeasonsSection(seasons: List<TvSeasonUi>) {
+private fun SeasonsSection(
+    seasons: List<TvSeasonUi>,
+    selectedSeasonNumber: Int?,
+    onSeasonSelected: (Int) -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = "Seasons",
@@ -630,8 +647,11 @@ private fun SeasonsSection(seasons: List<TvSeasonUi>) {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             items(seasons, key = { it.id }) { season ->
+                val selected = season.seasonNumber == selectedSeasonNumber
                 GlassSurface(
-                    modifier = Modifier.width(132.dp),
+                    modifier = Modifier
+                        .width(132.dp)
+                        .clickable { onSeasonSelected(season.seasonNumber) },
                     contentPadding = PaddingValues(8.dp),
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -648,6 +668,7 @@ private fun SeasonsSection(seasons: List<TvSeasonUi>) {
                         Text(
                             text = season.name,
                             style = MaterialTheme.typography.labelLarge,
+                            color = if (selected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -667,10 +688,13 @@ private fun SeasonsSection(seasons: List<TvSeasonUi>) {
 }
 
 @Composable
-private fun EpisodesSection(episodes: List<TvEpisodeUi>) {
+private fun EpisodesSection(
+    episodes: List<TvEpisodeUi>,
+    selectedSeasonNumber: Int?,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = "Episodes",
+            text = selectedSeasonNumber?.let { "Season $it Episodes" } ?: "Episodes",
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
@@ -871,6 +895,7 @@ private fun MovieDetailPreview() {
                         certification = "R",
                         genres = persistentListOf("Drama", "Thriller"),
                         seasons = persistentListOf(),
+                        selectedSeasonNumber = null,
                         episodes = persistentListOf(),
                         lastEpisode = null,
                         nextEpisode = null,
@@ -897,6 +922,7 @@ private fun MovieDetailPreview() {
             onFavoriteToggle = {},
             onUserRatingSelected = {},
             onNotesChanged = {},
+            onSeasonSelected = {},
         )
     }
 }

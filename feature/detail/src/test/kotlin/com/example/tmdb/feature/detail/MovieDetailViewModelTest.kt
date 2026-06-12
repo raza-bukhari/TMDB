@@ -254,6 +254,55 @@ class MovieDetailViewModelTest {
     }
 
     @Test
+    fun `given tv detail has multiple seasons, when second season selected, then second season episodes load`() = runTest {
+        repository.onDetailRefreshCachePopulation = {
+            aDetail.copy(
+                title = "Breaking Bad",
+                seasons = listOf(
+                    TvSeason(
+                        id = 10,
+                        name = "Season 1",
+                        overview = "",
+                        posterPath = "/season-1.jpg",
+                        airDate = LocalDate.of(2008, 1, 20),
+                        seasonNumber = 1,
+                        episodeCount = 7,
+                        voteAverage = 8.5,
+                    ),
+                    TvSeason(
+                        id = 20,
+                        name = "Season 2",
+                        overview = "",
+                        posterPath = "/season-2.jpg",
+                        airDate = LocalDate.of(2009, 3, 8),
+                        seasonNumber = 2,
+                        episodeCount = 13,
+                        voteAverage = 8.7,
+                    ),
+                ),
+            )
+        }
+        repository.tvSeasonResults[1] = seasonWithEpisode(seasonNumber = 1, episodeName = "Pilot")
+        repository.tvSeasonResults[2] = seasonWithEpisode(seasonNumber = 2, episodeName = "Seven Thirty-Seven")
+        val viewModel = viewModel(mediaType = "TV")
+
+        viewModel.uiState.test {
+            expectMostRecentItemAfter {
+                (it.content as? MovieDetailContent.Detail)?.detail?.episodes?.firstOrNull()?.title == "Pilot"
+            }
+
+            viewModel.onSeasonSelected(2)
+
+            val state = expectMostRecentItemAfter {
+                (it.content as? MovieDetailContent.Detail)?.detail?.episodes?.firstOrNull()?.title == "Seven Thirty-Seven"
+            }
+            val detail = (state.content as MovieDetailContent.Detail).detail
+            assertEquals(2, detail.selectedSeasonNumber)
+            assertEquals(listOf(1, 2), repository.tvSeasonCalls)
+        }
+    }
+
+    @Test
     fun `given detail is visible, when watchlist toggled, then saved state is reflected`() = runTest {
         repository.onDetailRefreshCachePopulation = { aDetail }
         val viewModel = viewModel()
@@ -280,3 +329,28 @@ class MovieDetailViewModelTest {
         }
     }
 }
+
+private fun seasonWithEpisode(seasonNumber: Int, episodeName: String): TvSeason = TvSeason(
+    id = seasonNumber.toLong(),
+    name = "Season $seasonNumber",
+    overview = "",
+    posterPath = "/season-$seasonNumber.jpg",
+    airDate = null,
+    seasonNumber = seasonNumber,
+    episodeCount = 1,
+    voteAverage = 8.0,
+    episodes = listOf(
+        TvEpisode(
+            id = seasonNumber * 100L + 1,
+            name = episodeName,
+            overview = "Episode overview",
+            stillPath = "/episode-$seasonNumber.jpg",
+            airDate = null,
+            seasonNumber = seasonNumber,
+            episodeNumber = 1,
+            runtimeMinutes = 45,
+            voteAverage = 8.0,
+            voteCount = 10,
+        ),
+    ),
+)

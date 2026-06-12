@@ -6,7 +6,7 @@ data class DiscoverMovieFilters(
     val fromYear: Int? = null,
     val toYear: Int? = null,
     val genres: Set<MovieGenre> = emptySet(),
-    val mediaType: MediaType = MediaType.MOVIE,
+    val mediaType: MediaType? = null,
     val language: String? = null,
     val runtimeGte: Int? = null,
     val runtimeLte: Int? = null,
