@@ -12,7 +12,9 @@ import com.example.tmdb.core.designsystem.theme.TMDBTheme
 import com.example.tmdb.core.designsystem.theme.ThemeMode
 import com.example.tmdb.domain.model.HomeList
 import com.example.tmdb.domain.model.MediaType
+import com.example.tmdb.domain.model.WatchlistStatus
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -49,6 +51,7 @@ class MoviesScreenTest {
                 onDiscoverFiltersChanged = {},
                 onDiscoverFiltersReset = {},
                 onTabSelected = onTabSelected,
+                onWatchlistFilterSelected = {},
                 onWatchlistToggle = onWatchlistToggle,
                 onTrendingWindowSelected = onTrendingWindowSelected,
                 onRetryClick = onRetryClick,
@@ -207,6 +210,7 @@ class MoviesScreenTest {
             ),
         ),
         watchlistMovies = watchlistMovies,
+        watchlistItems = watchlistMovies.map { it.toTestWatchlistItem() }.toImmutableList(),
     )
 
     private fun movie(id: Long, title: String) = MovieListItem(
@@ -218,5 +222,15 @@ class MoviesScreenTest {
         rating = 8.4,
         voteCount = 100,
         releaseYear = "1999",
+    )
+
+    private fun MovieListItem.toTestWatchlistItem() = WatchlistItemUi(
+        movie = this,
+        status = WatchlistStatus.PLAN_TO_WATCH,
+        favorite = false,
+        userRating = null,
+        watchedDate = null,
+        notes = "",
+        addedAtMillis = 0,
     )
 }

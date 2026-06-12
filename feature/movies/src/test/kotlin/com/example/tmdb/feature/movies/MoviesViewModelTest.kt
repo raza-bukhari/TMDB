@@ -13,6 +13,7 @@ import com.example.tmdb.domain.usecase.AddMovieToWatchlistUseCase
 import com.example.tmdb.domain.usecase.DiscoverMoviesUseCase
 import com.example.tmdb.domain.usecase.GetHomeListUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistIdsUseCase
+import com.example.tmdb.domain.usecase.ObserveWatchlistItemsUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistUseCase
 import com.example.tmdb.domain.usecase.RemoveMovieFromWatchlistUseCase
 import com.example.tmdb.domain.usecase.SearchMoviesUseCase
@@ -34,6 +35,7 @@ class MoviesViewModelTest {
         searchMovies = SearchMoviesUseCase(repository),
         discoverMovies = DiscoverMoviesUseCase(repository),
         observeWatchlist = ObserveWatchlistUseCase(repository),
+        observeWatchlistItems = ObserveWatchlistItemsUseCase(repository),
         observeWatchlistIds = ObserveWatchlistIdsUseCase(repository),
         addMovieToWatchlist = AddMovieToWatchlistUseCase(repository),
         removeMovieFromWatchlist = RemoveMovieFromWatchlistUseCase(repository),

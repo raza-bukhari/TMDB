@@ -8,6 +8,8 @@ import com.example.tmdb.core.database.TmdbDatabase
 import com.example.tmdb.core.network.OmdbApi
 import com.example.tmdb.core.network.TmdbApi
 import com.example.tmdb.domain.model.HomeList
+import com.example.tmdb.domain.model.UserMediaActivity
+import com.example.tmdb.domain.model.WatchlistStatus
 import com.example.tmdb.domain.model.MovieId
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -112,6 +114,32 @@ class OfflineFirstMovieRepositoryTest {
         }
         repository.observeWatchlistIds().test {
             assertEquals(setOf(MovieId(550)), awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `given watchlist activity is updated, when observing rich watchlist, then metadata persists`() = runTest {
+        server.enqueue(MockResponse.Builder().code(200).body(fixture("popular_page_1.json")).build())
+        val movie = repository.homeList(HomeList.POPULAR).getOrThrow().first()
+        repository.addToWatchlist(movie).getOrThrow()
+
+        repository.updateUserActivity(
+            UserMediaActivity(
+                mediaId = movie.id,
+                status = WatchlistStatus.COMPLETED,
+                favorite = true,
+                userRating = 9.0,
+                notes = "Rewatch with friends.",
+            ),
+        ).getOrThrow()
+
+        repository.observeWatchlistItems().test {
+            val item = awaitItem().first()
+            assertEquals(WatchlistStatus.COMPLETED, item.status)
+            assertEquals(true, item.favorite)
+            assertEquals(9.0, item.userRating)
+            assertEquals("Rewatch with friends.", item.notes)
             cancelAndIgnoreRemainingEvents()
         }
     }

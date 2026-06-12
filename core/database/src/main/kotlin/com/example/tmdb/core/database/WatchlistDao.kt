@@ -18,6 +18,26 @@ interface WatchlistDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(movie: WatchlistMovieEntity)
 
+    @Query(
+        """
+        UPDATE watchlist_movies
+        SET status = :status,
+            favorite = :favorite,
+            userRating = :userRating,
+            watchedDate = :watchedDate,
+            notes = :notes
+        WHERE id = :id
+        """,
+    )
+    suspend fun updateActivity(
+        id: Long,
+        status: String,
+        favorite: Boolean,
+        userRating: Double?,
+        watchedDate: String?,
+        notes: String,
+    )
+
     @Query("DELETE FROM watchlist_movies WHERE id = :id")
     suspend fun delete(id: Long)
 }

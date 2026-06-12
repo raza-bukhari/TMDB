@@ -12,6 +12,8 @@ import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
 import com.example.tmdb.domain.model.TvEpisode
 import com.example.tmdb.domain.model.TvSeason
+import com.example.tmdb.domain.model.UserMediaActivity
+import com.example.tmdb.domain.model.WatchlistItem
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -38,6 +40,8 @@ interface MovieRepository {
 
     fun observeWatchlist(): Flow<List<Movie>>
 
+    fun observeWatchlistItems(): Flow<List<WatchlistItem>>
+
     fun observeWatchlistIds(): Flow<Set<MovieId>>
 
     suspend fun addToWatchlist(movie: Movie): Result<Unit>
@@ -45,6 +49,8 @@ interface MovieRepository {
     suspend fun addToWatchlist(detail: MovieDetail): Result<Unit>
 
     suspend fun removeFromWatchlist(id: MovieId): Result<Unit>
+
+    suspend fun updateUserActivity(activity: UserMediaActivity): Result<Unit>
 
     /** IMDb/RT/Metacritic scores via OMDb; empty success when no OMDb key is configured. */
     suspend fun externalRatings(imdbId: String): Result<ExternalRatings>

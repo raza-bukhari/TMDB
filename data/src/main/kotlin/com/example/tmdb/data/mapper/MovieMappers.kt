@@ -25,6 +25,8 @@ import com.example.tmdb.domain.model.SearchResults
 import com.example.tmdb.domain.model.TvEpisode
 import com.example.tmdb.domain.model.TvSeason
 import com.example.tmdb.domain.model.WatchProvider
+import com.example.tmdb.domain.model.WatchlistItem
+import com.example.tmdb.domain.model.WatchlistStatus
 import java.time.LocalDate
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -89,6 +91,7 @@ internal fun MovieDetailEntity.toDomain(): MovieDetail {
 
     return MovieDetail(
         id = MovieId(id),
+        mediaType = if (numberOfSeasons != null || seasonDtos.isNotEmpty()) MediaType.TV else MediaType.MOVIE,
         title = title,
         overview = overview,
         tagline = tagline,
@@ -217,6 +220,17 @@ internal fun WatchlistMovieEntity.toDomain(): Movie = Movie(
     releaseDate = parseDate(releaseDate),
     voteAverage = voteAverage,
     voteCount = voteCount,
+    mediaType = runCatching { MediaType.valueOf(mediaType) }.getOrDefault(MediaType.MOVIE),
+)
+
+internal fun WatchlistMovieEntity.toWatchlistItem(): WatchlistItem = WatchlistItem(
+    movie = toDomain(),
+    status = runCatching { WatchlistStatus.valueOf(status) }.getOrDefault(WatchlistStatus.PLAN_TO_WATCH),
+    favorite = favorite,
+    userRating = userRating,
+    watchedDate = parseDate(watchedDate),
+    notes = notes,
+    addedAtMillis = addedAtMillis,
 )
 
 internal fun Movie.toWatchlistEntity(addedAtMillis: Long): WatchlistMovieEntity = WatchlistMovieEntity(
@@ -229,6 +243,7 @@ internal fun Movie.toWatchlistEntity(addedAtMillis: Long): WatchlistMovieEntity 
     voteAverage = voteAverage,
     voteCount = voteCount,
     addedAtMillis = addedAtMillis,
+    mediaType = mediaType.name,
 )
 
 internal fun MovieDetail.toWatchlistEntity(addedAtMillis: Long): WatchlistMovieEntity = WatchlistMovieEntity(
@@ -241,6 +256,7 @@ internal fun MovieDetail.toWatchlistEntity(addedAtMillis: Long): WatchlistMovieE
     voteAverage = voteAverage,
     voteCount = voteCount,
     addedAtMillis = addedAtMillis,
+    mediaType = mediaType.name,
 )
 
 private val MovieDto.displayTitle: String

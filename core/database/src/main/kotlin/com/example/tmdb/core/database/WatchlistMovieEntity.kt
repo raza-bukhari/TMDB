@@ -14,4 +14,10 @@ data class WatchlistMovieEntity(
     val voteAverage: Double,
     val voteCount: Int,
     val addedAtMillis: Long,
+    val mediaType: String = "MOVIE",
+    val status: String = "PLAN_TO_WATCH",
+    val favorite: Boolean = false,
+    val userRating: Double? = null,
+    val watchedDate: String? = null,
+    val notes: String = "",
 )

@@ -10,10 +10,12 @@ import com.example.tmdb.domain.usecase.GetTvSeasonUseCase
 import com.example.tmdb.domain.usecase.ObserveMovieDetailUseCase
 import com.example.tmdb.domain.usecase.ObserveMoviesUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistIdsUseCase
+import com.example.tmdb.domain.usecase.ObserveWatchlistItemsUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistUseCase
 import com.example.tmdb.domain.usecase.RefreshMovieDetailUseCase
 import com.example.tmdb.domain.usecase.RemoveMovieFromWatchlistUseCase
 import com.example.tmdb.domain.usecase.SearchMoviesUseCase
+import com.example.tmdb.domain.usecase.UpdateUserActivityUseCase
 import org.koin.core.module.dsl.factoryOf
 import org.koin.dsl.module
 
@@ -29,7 +31,9 @@ val domainModule = module {
     factoryOf(::SearchMoviesUseCase)
     factoryOf(::DiscoverMoviesUseCase)
     factoryOf(::ObserveWatchlistUseCase)
+    factoryOf(::ObserveWatchlistItemsUseCase)
     factoryOf(::ObserveWatchlistIdsUseCase)
     factoryOf(::AddMovieToWatchlistUseCase)
     factoryOf(::RemoveMovieFromWatchlistUseCase)
+    factoryOf(::UpdateUserActivityUseCase)
 }

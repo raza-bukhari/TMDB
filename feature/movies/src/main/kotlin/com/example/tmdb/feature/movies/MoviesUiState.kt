@@ -5,6 +5,8 @@ import com.example.tmdb.domain.model.HomeList
 import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieId
+import com.example.tmdb.domain.model.WatchlistItem
+import com.example.tmdb.domain.model.WatchlistStatus
 import java.time.LocalDate
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -20,6 +22,8 @@ data class MoviesUiState(
     val hero: MovieListItem? = null,
     val sections: ImmutableList<HomeSectionUi> = persistentListOf(),
     val watchlistMovies: ImmutableList<MovieListItem> = persistentListOf(),
+    val watchlistItems: ImmutableList<WatchlistItemUi> = persistentListOf(),
+    val selectedWatchlistFilter: WatchlistFilter = WatchlistFilter.ALL,
     val watchlistIds: Set<MovieId> = emptySet(),
     val discoverQuery: String = "",
     val discoverFilters: MovieFilters = MovieFilters(),
@@ -30,6 +34,16 @@ enum class MoviesTab {
     DISCOVER,
     WATCHLIST,
     PROFILE,
+}
+
+enum class WatchlistFilter(val label: String) {
+    ALL("All"),
+    MOVIES("Movies"),
+    SERIES("Series"),
+    FAVORITES("Favorites"),
+    WATCHING("Watching"),
+    COMPLETED("Completed"),
+    PLAN_TO_WATCH("Plan to watch"),
 }
 
 enum class TrendingWindow {
@@ -60,6 +74,17 @@ data class MovieListItem(
     val mediaType: MediaType = MediaType.MOVIE,
 )
 
+@Immutable
+data class WatchlistItemUi(
+    val movie: MovieListItem,
+    val status: WatchlistStatus,
+    val favorite: Boolean,
+    val userRating: Double?,
+    val watchedDate: String?,
+    val notes: String,
+    val addedAtMillis: Long,
+)
+
 private const val POSTER_BASE = "https://image.tmdb.org/t/p/w342"
 private const val BACKDROP_BASE = "https://image.tmdb.org/t/p/w780"
 
@@ -78,6 +103,29 @@ internal fun Movie.toListItem(): MovieListItem = MovieListItem(
 
 internal fun List<Movie>.toMovieListItems(): ImmutableList<MovieListItem> =
     map { it.toListItem() }.toImmutableList()
+
+internal fun List<WatchlistItem>.toWatchlistItemUi(): ImmutableList<WatchlistItemUi> =
+    map { it.toUi() }.toImmutableList()
+
+internal fun WatchlistItem.toUi(): WatchlistItemUi = WatchlistItemUi(
+    movie = movie.toListItem(),
+    status = status,
+    favorite = favorite,
+    userRating = userRating,
+    watchedDate = watchedDate?.toString(),
+    notes = notes,
+    addedAtMillis = addedAtMillis,
+)
+
+internal fun List<WatchlistItemUi>.filteredBy(filter: WatchlistFilter): List<WatchlistItemUi> = when (filter) {
+    WatchlistFilter.ALL -> this
+    WatchlistFilter.MOVIES -> filter { it.movie.mediaType == MediaType.MOVIE }
+    WatchlistFilter.SERIES -> filter { it.movie.mediaType == MediaType.TV }
+    WatchlistFilter.FAVORITES -> filter { it.favorite }
+    WatchlistFilter.WATCHING -> filter { it.status == WatchlistStatus.WATCHING }
+    WatchlistFilter.COMPLETED -> filter { it.status == WatchlistStatus.COMPLETED }
+    WatchlistFilter.PLAN_TO_WATCH -> filter { it.status == WatchlistStatus.PLAN_TO_WATCH }
+}
 
 internal fun MovieListItem.toDomainMovie(): Movie = Movie(
     id = MovieId(id),

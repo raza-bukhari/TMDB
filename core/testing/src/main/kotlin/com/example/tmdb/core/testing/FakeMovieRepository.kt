@@ -12,6 +12,9 @@ import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
 import com.example.tmdb.domain.model.TvEpisode
 import com.example.tmdb.domain.model.TvSeason
+import com.example.tmdb.domain.model.UserMediaActivity
+import com.example.tmdb.domain.model.WatchlistItem
+import com.example.tmdb.domain.model.WatchlistStatus
 import com.example.tmdb.domain.repository.MovieRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -63,14 +66,20 @@ class FakeMovieRepository : MovieRepository {
     // --- watchlist ---
 
     val watchlistFlow = MutableStateFlow<List<Movie>>(emptyList())
+    val watchlistItemsFlow = MutableStateFlow<List<WatchlistItem>>(emptyList())
     val watchlistIdsFlow = MutableStateFlow<Set<MovieId>>(emptySet())
 
     override fun observeWatchlist(): Flow<List<Movie>> = watchlistFlow
+
+    override fun observeWatchlistItems(): Flow<List<WatchlistItem>> = watchlistItemsFlow
 
     override fun observeWatchlistIds(): Flow<Set<MovieId>> = watchlistIdsFlow
 
     override suspend fun addToWatchlist(movie: Movie): Result<Unit> {
         watchlistFlow.update { current -> listOf(movie) + current.filterNot { it.id == movie.id } }
+        watchlistItemsFlow.update { current ->
+            listOf(movie.toWatchlistItem()) + current.filterNot { it.movie.id == movie.id }
+        }
         watchlistIdsFlow.update { it + movie.id }
         return Result.success(Unit)
     }
@@ -91,7 +100,27 @@ class FakeMovieRepository : MovieRepository {
 
     override suspend fun removeFromWatchlist(id: MovieId): Result<Unit> {
         watchlistFlow.update { current -> current.filterNot { it.id == id } }
+        watchlistItemsFlow.update { current -> current.filterNot { it.movie.id == id } }
         watchlistIdsFlow.update { it - id }
+        return Result.success(Unit)
+    }
+
+    override suspend fun updateUserActivity(activity: UserMediaActivity): Result<Unit> {
+        watchlistItemsFlow.update { current ->
+            current.map { item ->
+                if (item.movie.id == activity.mediaId) {
+                    item.copy(
+                        status = activity.status,
+                        favorite = activity.favorite,
+                        userRating = activity.userRating,
+                        watchedDate = activity.watchedDate,
+                        notes = activity.notes,
+                    )
+                } else {
+                    item
+                }
+            }
+        }
         return Result.success(Unit)
     }
 
@@ -164,4 +193,14 @@ class FakeMovieRepository : MovieRepository {
 
     override suspend fun tvEpisode(seriesId: MovieId, seasonNumber: Int, episodeNumber: Int): Result<TvEpisode> =
         tvEpisodeResult
+
+    private fun Movie.toWatchlistItem(): WatchlistItem = WatchlistItem(
+        movie = this,
+        status = WatchlistStatus.PLAN_TO_WATCH,
+        favorite = false,
+        userRating = null,
+        watchedDate = null,
+        notes = "",
+        addedAtMillis = 0,
+    )
 }

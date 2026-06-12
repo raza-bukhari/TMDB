@@ -14,6 +14,7 @@ import com.example.tmdb.domain.usecase.AddMovieToWatchlistUseCase
 import com.example.tmdb.domain.usecase.DiscoverMoviesUseCase
 import com.example.tmdb.domain.usecase.GetHomeListUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistIdsUseCase
+import com.example.tmdb.domain.usecase.ObserveWatchlistItemsUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistUseCase
 import com.example.tmdb.domain.usecase.RemoveMovieFromWatchlistUseCase
 import com.example.tmdb.domain.usecase.SearchMoviesUseCase
@@ -48,6 +49,7 @@ internal class MoviesViewModel(
     private val searchMovies: SearchMoviesUseCase,
     private val discoverMovies: DiscoverMoviesUseCase,
     private val observeWatchlist: ObserveWatchlistUseCase,
+    private val observeWatchlistItems: ObserveWatchlistItemsUseCase,
     private val observeWatchlistIds: ObserveWatchlistIdsUseCase,
     private val addMovieToWatchlist: AddMovieToWatchlistUseCase,
     private val removeMovieFromWatchlist: RemoveMovieFromWatchlistUseCase,
@@ -129,6 +131,10 @@ internal class MoviesViewModel(
         _uiState.update { it.copy(selectedTab = tab, searchQuery = "") }
     }
 
+    fun onWatchlistFilterSelected(filter: WatchlistFilter) {
+        _uiState.update { it.copy(selectedWatchlistFilter = filter) }
+    }
+
     fun onWatchlistToggle(movie: MovieListItem) {
         viewModelScope.launch {
             val id = MovieId(movie.id)
@@ -148,6 +154,11 @@ internal class MoviesViewModel(
         viewModelScope.launch {
             observeWatchlist().collect { movies ->
                 _uiState.update { it.copy(watchlistMovies = movies.toMovieListItems()) }
+            }
+        }
+        viewModelScope.launch {
+            observeWatchlistItems().collect { items ->
+                _uiState.update { it.copy(watchlistItems = items.toWatchlistItemUi()) }
             }
         }
         viewModelScope.launch {

@@ -4,6 +4,7 @@ import java.time.LocalDate
 
 data class MovieDetail(
     val id: MovieId,
+    val mediaType: MediaType = MediaType.MOVIE,
     val title: String,
     val overview: String,
     val tagline: String?,

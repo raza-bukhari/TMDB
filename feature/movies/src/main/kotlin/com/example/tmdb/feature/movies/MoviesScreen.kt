@@ -66,6 +66,7 @@ import androidx.paging.compose.itemKey
 import coil3.compose.AsyncImage
 import com.example.tmdb.core.designsystem.ThemePreviews
 import com.example.tmdb.core.designsystem.component.ErrorState
+import com.example.tmdb.core.designsystem.component.FilterChipPill
 import com.example.tmdb.core.designsystem.component.PosterCard
 import com.example.tmdb.core.designsystem.component.RatingBadge
 import com.example.tmdb.core.designsystem.theme.TMDBTheme
@@ -125,6 +126,7 @@ fun MoviesScreen(
         onDiscoverFiltersChanged = viewModel::onDiscoverFiltersChanged,
         onDiscoverFiltersReset = viewModel::onDiscoverFiltersReset,
         onTabSelected = viewModel::onTabSelected,
+        onWatchlistFilterSelected = viewModel::onWatchlistFilterSelected,
         onWatchlistToggle = viewModel::onWatchlistToggle,
         onTrendingWindowSelected = viewModel::onTrendingWindowSelected,
         onRetryClick = viewModel::onRetryClicked,
@@ -147,6 +149,7 @@ internal fun MoviesScreenContent(
     onDiscoverFiltersChanged: (MovieFilters) -> Unit,
     onDiscoverFiltersReset: () -> Unit,
     onTabSelected: (MoviesTab) -> Unit,
+    onWatchlistFilterSelected: (WatchlistFilter) -> Unit,
     onWatchlistToggle: (MovieListItem) -> Unit,
     onTrendingWindowSelected: (TrendingWindow) -> Unit,
     onRetryClick: () -> Unit,
@@ -178,6 +181,7 @@ internal fun MoviesScreenContent(
                             onDiscoverFiltersChanged = onDiscoverFiltersChanged,
                             onDiscoverFiltersReset = onDiscoverFiltersReset,
                             onTabSelected = onTabSelected,
+                            onWatchlistFilterSelected = onWatchlistFilterSelected,
                             onWatchlistToggle = onWatchlistToggle,
                             onTrendingWindowSelected = onTrendingWindowSelected,
                             onMovieClick = onMovieClick,
@@ -213,6 +217,7 @@ private fun HomeFeed(
     onDiscoverFiltersChanged: (MovieFilters) -> Unit,
     onDiscoverFiltersReset: () -> Unit,
     onTabSelected: (MoviesTab) -> Unit,
+    onWatchlistFilterSelected: (WatchlistFilter) -> Unit,
     onWatchlistToggle: (MovieListItem) -> Unit,
     onTrendingWindowSelected: (TrendingWindow) -> Unit,
     onMovieClick: (Long, com.example.tmdb.domain.model.MediaType) -> Unit,
@@ -296,13 +301,15 @@ private fun HomeFeed(
                     onWatchlistToggle = onWatchlistToggle,
                 )
                 MoviesTab.WATCHLIST -> watchlistContent(
-                    movies = state.watchlistMovies,
+                    items = state.watchlistItems,
+                    selectedFilter = state.selectedWatchlistFilter,
                     watchlistIds = state.watchlistIds,
+                    onFilterSelected = onWatchlistFilterSelected,
                     onMovieClick = onMovieClick,
                     onWatchlistToggle = onWatchlistToggle,
                 )
                 MoviesTab.PROFILE -> profileContent(
-                    savedCount = state.watchlistMovies.size,
+                    items = state.watchlistItems,
                     themeMode = themeMode,
                     onToggleTheme = onToggleTheme,
                 )
@@ -742,14 +749,17 @@ private fun DiscoverMovieGridRow(
 }
 
 private fun androidx.compose.foundation.lazy.LazyListScope.watchlistContent(
-    movies: List<MovieListItem>,
+    items: List<WatchlistItemUi>,
+    selectedFilter: WatchlistFilter,
     watchlistIds: Set<MovieId>,
+    onFilterSelected: (WatchlistFilter) -> Unit,
     onMovieClick: (Long, com.example.tmdb.domain.model.MediaType) -> Unit,
     onWatchlistToggle: (MovieListItem) -> Unit,
 ) {
+    val filteredItems = items.filteredBy(selectedFilter)
     item {
         Column(
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier
                 .statusBarsPadding()
                 .padding(horizontal = 16.dp)
@@ -758,31 +768,108 @@ private fun androidx.compose.foundation.lazy.LazyListScope.watchlistContent(
         ) {
             Text(text = "Watchlist", style = MaterialTheme.typography.headlineSmall)
             Text(
-                text = if (movies.isEmpty()) "Save movies from Home, Discover, or Details." else "Your saved movies, newest first.",
+                text = if (items.isEmpty()) "Save movies and series from Home, Discover, or Details." else "Your saved movies, series, favorites, and activity.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(WatchlistFilter.entries, key = { it.name }) { filter ->
+                    FilterChipPill(
+                        text = filter.label,
+                        selected = filter == selectedFilter,
+                        onClick = { onFilterSelected(filter) },
+                    )
+                }
+            }
         }
     }
-    if (movies.isEmpty()) return
+    if (filteredItems.isEmpty()) {
+        item {
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.padding(horizontal = 16.dp),
+            ) {
+                Text(
+                    text = if (items.isEmpty()) {
+                        "Your cinematic queue is empty."
+                    } else {
+                        "No titles match this watchlist filter."
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(16.dp),
+                )
+            }
+        }
+        return
+    }
     items(
-        items = movies,
-        key = { it.id },
-    ) { movie ->
-        SearchResultRow(
-            movie = movie,
-            isWatchlisted = MovieId(movie.id) in watchlistIds,
+        items = filteredItems,
+        key = { "${it.movie.mediaType}:${it.movie.id}" },
+    ) { item ->
+        WatchlistResultRow(
+            item = item,
+            isWatchlisted = MovieId(item.movie.id) in watchlistIds,
             onMovieClick = onMovieClick,
             onWatchlistToggle = onWatchlistToggle,
         )
     }
 }
 
+@Composable
+private fun WatchlistResultRow(
+    item: WatchlistItemUi,
+    isWatchlisted: Boolean,
+    onMovieClick: (Long, com.example.tmdb.domain.model.MediaType) -> Unit,
+    onWatchlistToggle: (MovieListItem) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(horizontal = 16.dp)) {
+        SearchResultRow(
+            movie = item.movie,
+            isWatchlisted = isWatchlisted,
+            onMovieClick = onMovieClick,
+            onWatchlistToggle = onWatchlistToggle,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = item.status.name.lowercase().replace('_', ' ').replaceFirstChar { it.titlecase() },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+            item.userRating?.let {
+                Text(
+                    text = "Your rating $it",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (item.favorite) {
+                Text(
+                    text = "Favorite",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
+            }
+        }
+    }
+}
+
 private fun androidx.compose.foundation.lazy.LazyListScope.profileContent(
-    savedCount: Int,
+    items: List<WatchlistItemUi>,
     themeMode: ThemeMode,
     onToggleTheme: () -> Unit,
 ) {
+    val savedCount = items.size
+    val movieCount = items.count { it.movie.mediaType == com.example.tmdb.domain.model.MediaType.MOVIE }
+    val seriesCount = items.count { it.movie.mediaType == com.example.tmdb.domain.model.MediaType.TV }
+    val watchingCount = items.count { it.status == com.example.tmdb.domain.model.WatchlistStatus.WATCHING }
+    val completedCount = items.count { it.status == com.example.tmdb.domain.model.WatchlistStatus.COMPLETED }
+    val favoriteCount = items.count { it.favorite }
+    val averageUserRating = items.mapNotNull { it.userRating }.takeIf { it.isNotEmpty() }?.average()
+    val recentNotes = items.filter { it.notes.isNotBlank() }.take(3)
+
     item {
         Column(
             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -795,13 +882,18 @@ private fun androidx.compose.foundation.lazy.LazyListScope.profileContent(
         ) {
             Text(text = "Profile", style = MaterialTheme.typography.headlineSmall)
             ProfileMetricRow(
-                label = "Saved movies",
+                label = "Saved titles",
                 value = savedCount.toString(),
             )
+            ProfileMetricRow(label = "Movies / Series", value = "$movieCount / $seriesCount")
+            ProfileMetricRow(label = "Watching / Completed", value = "$watchingCount / $completedCount")
+            ProfileMetricRow(label = "Favorites", value = favoriteCount.toString())
+            ProfileMetricRow(label = "Average user rating", value = averageUserRating?.let { String.format("%.1f", it) } ?: "Not rated")
             Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                shape = RoundedCornerShape(16.dp),
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -820,6 +912,27 @@ private fun androidx.compose.foundation.lazy.LazyListScope.profileContent(
                     }
                     TextButton(onClick = onToggleTheme) {
                         Text("Change")
+                    }
+                }
+            }
+            if (recentNotes.isNotEmpty()) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                    shape = RoundedCornerShape(16.dp),
+                ) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(text = "Recent notes", style = MaterialTheme.typography.titleMedium)
+                        recentNotes.forEach { item ->
+                            Text(
+                                text = "${item.movie.title}: ${item.notes}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     }
                 }
             }
@@ -1202,6 +1315,7 @@ private fun MoviesHomePreview() {
             onDiscoverFiltersChanged = {},
             onDiscoverFiltersReset = {},
             onTabSelected = {},
+            onWatchlistFilterSelected = {},
             onWatchlistToggle = {},
             onTrendingWindowSelected = {},
             onRetryClick = {},

@@ -12,6 +12,9 @@ import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
 import com.example.tmdb.domain.model.TvEpisode
 import com.example.tmdb.domain.model.TvSeason
+import com.example.tmdb.domain.model.UserMediaActivity
+import com.example.tmdb.domain.model.WatchlistItem
+import com.example.tmdb.domain.model.WatchlistStatus
 import com.example.tmdb.domain.repository.MovieRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +26,7 @@ class FakeRepo : MovieRepository {
     val movies = MutableStateFlow<List<Movie>>(emptyList())
     val detail = MutableStateFlow<MovieDetail?>(null)
     val watchlist = MutableStateFlow<List<Movie>>(emptyList())
+    val watchlistItems = MutableStateFlow<List<WatchlistItem>>(emptyList())
 
     var detailResult: Result<Unit> = Result.success(Unit)
     var homeResult: Result<List<Movie>> = Result.success(emptyList())
@@ -103,11 +107,14 @@ class FakeRepo : MovieRepository {
 
     override fun observeWatchlist(): Flow<List<Movie>> = watchlist
 
+    override fun observeWatchlistItems(): Flow<List<WatchlistItem>> = watchlistItems
+
     override fun observeWatchlistIds(): Flow<Set<MovieId>> =
         watchlist.map { movies -> movies.map { it.id }.toSet() }
 
     override suspend fun addToWatchlist(movie: Movie): Result<Unit> {
         watchlist.value = (listOf(movie) + watchlist.value.filterNot { it.id == movie.id })
+        watchlistItems.value = listOf(movie.toWatchlistItem()) + watchlistItems.value.filterNot { it.movie.id == movie.id }
         return Result.success(Unit)
     }
 
@@ -128,6 +135,34 @@ class FakeRepo : MovieRepository {
 
     override suspend fun removeFromWatchlist(id: MovieId): Result<Unit> {
         watchlist.value = watchlist.value.filterNot { it.id == id }
+        watchlistItems.value = watchlistItems.value.filterNot { it.movie.id == id }
         return Result.success(Unit)
     }
+
+    override suspend fun updateUserActivity(activity: UserMediaActivity): Result<Unit> {
+        watchlistItems.value = watchlistItems.value.map { item ->
+            if (item.movie.id == activity.mediaId) {
+                item.copy(
+                    status = activity.status,
+                    favorite = activity.favorite,
+                    userRating = activity.userRating,
+                    watchedDate = activity.watchedDate,
+                    notes = activity.notes,
+                )
+            } else {
+                item
+            }
+        }
+        return Result.success(Unit)
+    }
+
+    private fun Movie.toWatchlistItem(): WatchlistItem = WatchlistItem(
+        movie = this,
+        status = WatchlistStatus.PLAN_TO_WATCH,
+        favorite = false,
+        userRating = null,
+        watchedDate = null,
+        notes = "",
+        addedAtMillis = 0,
+    )
 }
