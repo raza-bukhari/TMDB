@@ -18,6 +18,8 @@ import kotlinx.collections.immutable.toImmutableList
 data class MovieDetailUiState(
     val isRefreshing: Boolean = false,
     val content: MovieDetailContent = MovieDetailContent.Loading,
+    val selectedEpisode: TvEpisodeUi? = null,
+    val isEpisodeLoading: Boolean = false,
 )
 
 /** Cached detail always wins over a refresh error (same invariant as the movies list). */

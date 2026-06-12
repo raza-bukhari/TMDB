@@ -61,6 +61,8 @@ class MovieDetailScreenTest {
                     onUserRatingSelected = {},
                     onNotesChanged = {},
                     onSeasonSelected = {},
+                    onEpisodeSelected = {},
+                    onEpisodeDismissed = {},
                 )
             }
         }
@@ -89,6 +91,8 @@ class MovieDetailScreenTest {
                     onUserRatingSelected = {},
                     onNotesChanged = {},
                     onSeasonSelected = {},
+                    onEpisodeSelected = {},
+                    onEpisodeDismissed = {},
                 )
             }
         }
@@ -115,6 +119,8 @@ class MovieDetailScreenTest {
                     onUserRatingSelected = {},
                     onNotesChanged = {},
                     onSeasonSelected = {},
+                    onEpisodeSelected = {},
+                    onEpisodeDismissed = {},
                 )
             }
         }
@@ -145,6 +151,8 @@ class MovieDetailScreenTest {
                     onUserRatingSelected = {},
                     onNotesChanged = {},
                     onSeasonSelected = {},
+                    onEpisodeSelected = {},
+                    onEpisodeDismissed = {},
                 )
             }
         }

@@ -30,9 +30,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -105,10 +107,13 @@ fun MovieDetailScreen(
         onUserRatingSelected = viewModel::onUserRatingSelected,
         onNotesChanged = viewModel::onNotesChanged,
         onSeasonSelected = viewModel::onSeasonSelected,
+        onEpisodeSelected = viewModel::onEpisodeSelected,
+        onEpisodeDismissed = viewModel::onEpisodeDismissed,
         modifier = modifier,
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun MovieDetailScreenContent(
     state: MovieDetailUiState,
@@ -123,6 +128,8 @@ internal fun MovieDetailScreenContent(
     onUserRatingSelected: (Double?) -> Unit,
     onNotesChanged: (String) -> Unit,
     onSeasonSelected: (Int) -> Unit,
+    onEpisodeSelected: (TvEpisodeUi) -> Unit,
+    onEpisodeDismissed: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(modifier = modifier.fillMaxSize()) {
@@ -145,7 +152,21 @@ internal fun MovieDetailScreenContent(
                     onUserRatingSelected = onUserRatingSelected,
                     onNotesChanged = onNotesChanged,
                     onSeasonSelected = onSeasonSelected,
+                    onEpisodeSelected = onEpisodeSelected,
                 )
+            }
+
+            state.selectedEpisode?.let { episode ->
+                ModalBottomSheet(onDismissRequest = onEpisodeDismissed) {
+                    EpisodeDetailSheet(
+                        episode = episode,
+                        isLoading = state.isEpisodeLoading,
+                        modifier = Modifier
+                            .navigationBarsPadding()
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 24.dp),
+                    )
+                }
             }
         }
     }
@@ -164,6 +185,7 @@ private fun CollapsingDetail(
     onUserRatingSelected: (Double?) -> Unit,
     onNotesChanged: (String) -> Unit,
     onSeasonSelected: (Int) -> Unit,
+    onEpisodeSelected: (TvEpisodeUi) -> Unit,
 ) {
     val scroll = rememberScrollState()
     val density = LocalDensity.current
@@ -216,6 +238,7 @@ private fun CollapsingDetail(
                 onUserRatingSelected = onUserRatingSelected,
                 onNotesChanged = onNotesChanged,
                 onSeasonSelected = onSeasonSelected,
+                onEpisodeSelected = onEpisodeSelected,
                 modifier = Modifier.heightIn(min = infoMinHeight),
             )
         }
@@ -264,6 +287,7 @@ private fun DetailInfo(
     onUserRatingSelected: (Double?) -> Unit,
     onNotesChanged: (String) -> Unit,
     onSeasonSelected: (Int) -> Unit,
+    onEpisodeSelected: (TvEpisodeUi) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -369,6 +393,7 @@ private fun DetailInfo(
             EpisodesSection(
                 episodes = detail.episodes,
                 selectedSeasonNumber = detail.selectedSeasonNumber,
+                onEpisodeSelected = onEpisodeSelected,
             )
         }
 
@@ -376,6 +401,7 @@ private fun DetailInfo(
             EpisodeMilestonesSection(
                 lastEpisode = detail.lastEpisode,
                 nextEpisode = detail.nextEpisode,
+                onEpisodeSelected = onEpisodeSelected,
             )
         }
 
@@ -691,6 +717,7 @@ private fun SeasonsSection(
 private fun EpisodesSection(
     episodes: List<TvEpisodeUi>,
     selectedSeasonNumber: Int?,
+    onEpisodeSelected: (TvEpisodeUi) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
@@ -703,7 +730,7 @@ private fun EpisodesSection(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             episodes.take(8).forEach { episode ->
-                EpisodeRow(episode)
+                EpisodeRow(episode = episode, onClick = { onEpisodeSelected(episode) })
             }
         }
     }
@@ -713,19 +740,23 @@ private fun EpisodesSection(
 private fun EpisodeMilestonesSection(
     lastEpisode: TvEpisodeUi?,
     nextEpisode: TvEpisodeUi?,
+    onEpisodeSelected: (TvEpisodeUi) -> Unit,
 ) {
     Column(
         modifier = Modifier.padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        lastEpisode?.let { EpisodeMilestoneCard("Last Episode", it) }
-        nextEpisode?.let { EpisodeMilestoneCard("Next Episode", it) }
+        lastEpisode?.let { EpisodeMilestoneCard("Last Episode", it, onClick = { onEpisodeSelected(it) }) }
+        nextEpisode?.let { EpisodeMilestoneCard("Next Episode", it, onClick = { onEpisodeSelected(it) }) }
     }
 }
 
 @Composable
-private fun EpisodeMilestoneCard(label: String, episode: TvEpisodeUi) {
-    GlassSurface(contentPadding = PaddingValues(12.dp)) {
+private fun EpisodeMilestoneCard(label: String, episode: TvEpisodeUi, onClick: () -> Unit) {
+    GlassSurface(
+        modifier = Modifier.clickable(onClick = onClick),
+        contentPadding = PaddingValues(12.dp),
+    ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
             Text(text = "S${episode.seasonNumber} E${episode.episodeNumber} · ${episode.title}", style = MaterialTheme.typography.titleSmall)
@@ -737,8 +768,11 @@ private fun EpisodeMilestoneCard(label: String, episode: TvEpisodeUi) {
 }
 
 @Composable
-private fun EpisodeRow(episode: TvEpisodeUi) {
-    GlassSurface(contentPadding = PaddingValues(10.dp)) {
+private fun EpisodeRow(episode: TvEpisodeUi, onClick: () -> Unit) {
+    GlassSurface(
+        modifier = Modifier.clickable(onClick = onClick),
+        contentPadding = PaddingValues(10.dp),
+    ) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             AsyncImage(
                 model = episode.stillUrl,
@@ -775,6 +809,55 @@ private fun EpisodeRow(episode: TvEpisodeUi) {
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun EpisodeDetailSheet(
+    episode: TvEpisodeUi,
+    isLoading: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        AsyncImage(
+            model = episode.stillUrl,
+            contentDescription = episode.title,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(16f / 9f)
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+        )
+        Text(
+            text = "S${episode.seasonNumber} E${episode.episodeNumber}",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.secondary,
+        )
+        Text(text = episode.title, style = MaterialTheme.typography.headlineSmall)
+        val meta = listOfNotNull(episode.airDate, episode.runtime).joinToString(" · ")
+        if (meta.isNotBlank()) {
+            Text(
+                text = meta,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        RatingRing(rating = episode.rating)
+        if (isLoading) {
+            Text(
+                text = "Loading full episode details...",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (episode.overview.isNotBlank()) {
+            Text(
+                text = episode.overview,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -923,6 +1006,8 @@ private fun MovieDetailPreview() {
             onUserRatingSelected = {},
             onNotesChanged = {},
             onSeasonSelected = {},
+            onEpisodeSelected = {},
+            onEpisodeDismissed = {},
         )
     }
 }

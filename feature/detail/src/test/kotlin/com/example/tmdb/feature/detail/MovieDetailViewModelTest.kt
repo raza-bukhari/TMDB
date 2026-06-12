@@ -17,6 +17,7 @@ import com.example.tmdb.domain.model.WatchProviderRegion
 import com.example.tmdb.domain.usecase.AddMovieToWatchlistUseCase
 import com.example.tmdb.domain.usecase.GetExternalRatingsUseCase
 import com.example.tmdb.domain.usecase.GetMediaVideosUseCase
+import com.example.tmdb.domain.usecase.GetTvEpisodeUseCase
 import com.example.tmdb.domain.usecase.GetTvSeasonUseCase
 import com.example.tmdb.domain.usecase.GetWatchProvidersUseCase
 import com.example.tmdb.domain.usecase.ObserveMovieDetailUseCase
@@ -63,6 +64,7 @@ class MovieDetailViewModelTest {
         refreshMovieDetail = RefreshMovieDetailUseCase(repository),
         getExternalRatings = GetExternalRatingsUseCase(repository),
         getMediaVideos = GetMediaVideosUseCase(repository),
+        getTvEpisode = GetTvEpisodeUseCase(repository),
         getTvSeason = GetTvSeasonUseCase(repository),
         getWatchProviders = GetWatchProvidersUseCase(repository),
         observeWatchlistItems = ObserveWatchlistItemsUseCase(repository),
@@ -299,6 +301,50 @@ class MovieDetailViewModelTest {
             val detail = (state.content as MovieDetailContent.Detail).detail
             assertEquals(2, detail.selectedSeasonNumber)
             assertEquals(listOf(1, 2), repository.tvSeasonCalls)
+        }
+    }
+
+    @Test
+    fun `given tv detail is visible, when episode selected, then full episode details load`() = runTest {
+        val summary = TvEpisodeUi(
+            id = 101,
+            title = "Pilot",
+            overview = "Short overview",
+            stillUrl = null,
+            airDate = null,
+            seasonNumber = 1,
+            episodeNumber = 1,
+            runtime = null,
+            rating = 8.0,
+        )
+        repository.onDetailRefreshCachePopulation = { aDetail.copy(title = "Breaking Bad") }
+        repository.tvEpisodeResult = Result.success(
+            TvEpisode(
+                id = 101,
+                name = "Pilot",
+                overview = "A chemistry teacher changes lanes.",
+                stillPath = "/pilot.jpg",
+                airDate = LocalDate.of(2008, 1, 20),
+                seasonNumber = 1,
+                episodeNumber = 1,
+                runtimeMinutes = 58,
+                voteAverage = 8.3,
+                voteCount = 100,
+            ),
+        )
+        val viewModel = viewModel(mediaType = "TV")
+
+        viewModel.uiState.test {
+            expectMostRecentItemAfter { it.content is MovieDetailContent.Detail }
+
+            viewModel.onEpisodeSelected(summary)
+
+            val state = expectMostRecentItemAfter {
+                it.selectedEpisode?.overview == "A chemistry teacher changes lanes."
+            }
+            assertEquals("https://image.tmdb.org/t/p/w780/pilot.jpg", state.selectedEpisode?.stillUrl)
+            assertEquals("58m", state.selectedEpisode?.runtime)
+            assertEquals(false, state.isEpisodeLoading)
         }
     }
 

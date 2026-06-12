@@ -18,6 +18,7 @@ import com.example.tmdb.domain.model.appErrorOrNull
 import com.example.tmdb.domain.usecase.AddMovieToWatchlistUseCase
 import com.example.tmdb.domain.usecase.GetExternalRatingsUseCase
 import com.example.tmdb.domain.usecase.GetMediaVideosUseCase
+import com.example.tmdb.domain.usecase.GetTvEpisodeUseCase
 import com.example.tmdb.domain.usecase.GetTvSeasonUseCase
 import com.example.tmdb.domain.usecase.GetWatchProvidersUseCase
 import com.example.tmdb.domain.usecase.ObserveMovieDetailUseCase
@@ -43,6 +44,7 @@ internal class MovieDetailViewModel(
     private val refreshMovieDetail: RefreshMovieDetailUseCase,
     private val getExternalRatings: GetExternalRatingsUseCase,
     private val getMediaVideos: GetMediaVideosUseCase,
+    private val getTvEpisode: GetTvEpisodeUseCase,
     private val getTvSeason: GetTvSeasonUseCase,
     private val getWatchProviders: GetWatchProvidersUseCase,
     observeWatchlistItems: ObserveWatchlistItemsUseCase,
@@ -78,6 +80,8 @@ internal class MovieDetailViewModel(
     private val watchProviderRegion = MutableStateFlow<WatchProviderRegion?>(null)
     private val selectedSeasonNumber = MutableStateFlow<Int?>(null)
     private val seasonEpisodes = MutableStateFlow<List<TvEpisodeUi>>(emptyList())
+    private val selectedEpisode = MutableStateFlow<TvEpisodeUi?>(null)
+    private val isEpisodeLoading = MutableStateFlow(false)
     private var latestDetail: MovieDetail? = null
     private var loadedSeasonNumber: Int? = null
 
@@ -90,6 +94,11 @@ internal class MovieDetailViewModel(
                 ratings = ratings,
                 savedKeys = savedKeys,
             )
+        }
+
+    private val episodeSheetState =
+        combine(selectedEpisode, isEpisodeLoading) { episode, loading ->
+            EpisodeSheetState(selectedEpisode = episode, isEpisodeLoading = loading)
         }
 
     private val renderInputs =
@@ -110,11 +119,13 @@ internal class MovieDetailViewModel(
         }
 
     val uiState: StateFlow<MovieDetailUiState> =
-        combine(renderInputs, selectedSeasonNumber) { inputs, seasonNumber ->
+        combine(renderInputs, selectedSeasonNumber, episodeSheetState) { inputs, seasonNumber, episodeSheet ->
             val detail = inputs.detailState.detail
             latestDetail = detail
             MovieDetailUiState(
                 isRefreshing = inputs.detailState.refreshing,
+                selectedEpisode = episodeSheet.selectedEpisode,
+                isEpisodeLoading = episodeSheet.isEpisodeLoading,
                 content = when {
                     detail != null -> MovieDetailContent.Detail(
                         detail.toUi(
@@ -181,6 +192,24 @@ internal class MovieDetailViewModel(
         if (mediaType != MediaType.TV) return
         selectedSeasonNumber.value = seasonNumber
         loadSeasonEpisodes(seasonNumber)
+    }
+
+    fun onEpisodeSelected(episode: TvEpisodeUi) {
+        if (mediaType != MediaType.TV) return
+        selectedEpisode.value = episode
+        viewModelScope.launch {
+            isEpisodeLoading.value = true
+            selectedEpisode.value = getTvEpisode(movieId, episode.seasonNumber, episode.episodeNumber)
+                .getOrNull()
+                ?.toUi()
+                ?: episode
+            isEpisodeLoading.value = false
+        }
+    }
+
+    fun onEpisodeDismissed() {
+        selectedEpisode.value = null
+        isEpisodeLoading.value = false
     }
 
     private fun refresh() {
@@ -289,6 +318,11 @@ internal class MovieDetailViewModel(
         val episodes: List<TvEpisodeUi>,
         val activity: UserActivityUi?,
         val providers: WatchProviderRegion?,
+    )
+
+    private data class EpisodeSheetState(
+        val selectedEpisode: TvEpisodeUi?,
+        val isEpisodeLoading: Boolean,
     )
 }
 

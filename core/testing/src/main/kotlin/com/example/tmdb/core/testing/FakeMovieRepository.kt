@@ -206,9 +206,12 @@ class FakeMovieRepository : MovieRepository {
             voteCount = 0,
         ),
     )
+    val tvEpisodeCalls = mutableListOf<Pair<Int, Int>>()
 
-    override suspend fun tvEpisode(seriesId: MovieId, seasonNumber: Int, episodeNumber: Int): Result<TvEpisode> =
-        tvEpisodeResult
+    override suspend fun tvEpisode(seriesId: MovieId, seasonNumber: Int, episodeNumber: Int): Result<TvEpisode> {
+        tvEpisodeCalls += seasonNumber to episodeNumber
+        return tvEpisodeResult
+    }
 
     override suspend fun personDetail(personId: Long): Result<Person> =
         Result.success(
