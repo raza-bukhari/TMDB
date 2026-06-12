@@ -2,9 +2,17 @@
 
 TMDB Android is a Kotlin/Jetpack Compose app for browsing movies and TV series from [The Movie Database](https://www.themoviedb.org/). It is designed as a cinematic, local-first discovery experience with dark glass surfaces, poster-focused layouts, inline search, Discover filters, details, watchlist activity, profile stats, and person pages.
 
+## Screenshots
+
+| Home | Discover | Detail | Video Player |
+| :---: | :---: | :---: | :---: |
+| <img src="screenshots/home.png" width="200" alt="Home with auto-scrolling trending pager"/> | <img src="screenshots/discover.png" width="200" alt="Discover with filters"/> | <img src="screenshots/detail.png" width="200" alt="Detail with videos carousel"/> | <img src="screenshots/video-player.png" width="200" alt="In-app video playlist player"/> |
+
 ## Features
 
 - Home feed with TMDB lists, personalized local sections, and poster-first cards.
+- Auto-scrolling trending hero pager on Home that cycles through popular titles.
+- In-app video playlist player: a title's videos open in a dedicated YouTube player that auto-advances through the playlist with a highlighted up-next list.
 - Inline search on Home and Discover without launching a separate activity.
 - Discover for movies and TV series with advanced filters for rating, year, genre, language, runtime, provider, region, availability, and sort.
 - Movie and TV detail screens with cast, similar content, trailers, watch providers, seasons, episodes, last/next episode, external ratings, and local activity.
