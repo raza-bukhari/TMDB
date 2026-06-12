@@ -10,6 +10,8 @@ import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieCategory
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
+import com.example.tmdb.domain.model.TvEpisode
+import com.example.tmdb.domain.model.TvSeason
 import com.example.tmdb.domain.repository.MovieRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -68,6 +70,36 @@ class FakeRepo : MovieRepository {
 
     override suspend fun videos(id: MovieId, mediaType: MediaType): Result<List<MediaVideo>> =
         Result.success(emptyList())
+
+    override suspend fun tvSeason(seriesId: MovieId, seasonNumber: Int): Result<TvSeason> =
+        Result.success(
+            TvSeason(
+                id = 1,
+                name = "Season $seasonNumber",
+                overview = "",
+                posterPath = null,
+                airDate = null,
+                seasonNumber = seasonNumber,
+                episodeCount = 0,
+                voteAverage = 0.0,
+            ),
+        )
+
+    override suspend fun tvEpisode(seriesId: MovieId, seasonNumber: Int, episodeNumber: Int): Result<TvEpisode> =
+        Result.success(
+            TvEpisode(
+                id = 1,
+                name = "Episode $episodeNumber",
+                overview = "",
+                stillPath = null,
+                airDate = null,
+                seasonNumber = seasonNumber,
+                episodeNumber = episodeNumber,
+                runtimeMinutes = null,
+                voteAverage = 0.0,
+                voteCount = 0,
+            ),
+        )
 
     override fun observeWatchlist(): Flow<List<Movie>> = watchlist
 

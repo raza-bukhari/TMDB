@@ -6,7 +6,10 @@ import com.example.tmdb.domain.model.ExternalRatings
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MediaVideo
+import com.example.tmdb.domain.model.TvEpisode
+import com.example.tmdb.domain.model.TvSeason
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 
 data class MovieDetailUiState(
@@ -45,6 +48,30 @@ data class MovieSummaryUi(
 )
 
 @Immutable
+data class TvSeasonUi(
+    val id: Long,
+    val name: String,
+    val posterUrl: String?,
+    val airYear: String?,
+    val seasonNumber: Int,
+    val episodeCount: Int,
+    val rating: Double,
+)
+
+@Immutable
+data class TvEpisodeUi(
+    val id: Long,
+    val title: String,
+    val stillUrl: String?,
+    val airDate: String?,
+    val seasonNumber: Int,
+    val episodeNumber: Int,
+    val runtime: String?,
+    val rating: Double,
+    val overview: String,
+)
+
+@Immutable
 data class MovieDetailUi(
     val id: Long,
     val title: String,
@@ -54,9 +81,16 @@ data class MovieDetailUi(
     val backdropUrl: String?,
     val releaseYear: String?,
     val runtime: String?,
+    val status: String?,
+    val seasonCount: Int?,
+    val episodeCount: Int?,
     val rating: Double,
     val certification: String?,
     val genres: ImmutableList<String>,
+    val seasons: ImmutableList<TvSeasonUi>,
+    val episodes: ImmutableList<TvEpisodeUi>,
+    val lastEpisode: TvEpisodeUi?,
+    val nextEpisode: TvEpisodeUi?,
     val cast: ImmutableList<CastMemberUi>,
     val directors: ImmutableList<String>,
     val producers: ImmutableList<String>,
@@ -93,9 +127,16 @@ internal fun MovieDetail.toUi(
     backdropUrl = backdropPath?.let { BACKDROP_BASE + it },
     releaseYear = releaseDate?.year?.toString(),
     runtime = runtimeMinutes?.let { formatRuntime(it) },
+    status = status,
+    seasonCount = numberOfSeasons,
+    episodeCount = numberOfEpisodes,
     rating = voteAverage,
     certification = certification,
     genres = genres.toImmutableList(),
+    seasons = seasons.map { it.toUi() }.toImmutableList(),
+    episodes = persistentListOf(),
+    lastEpisode = lastEpisodeToAir?.toUi(),
+    nextEpisode = nextEpisodeToAir?.toUi(),
     cast = cast.map { member ->
         CastMemberUi(
             id = member.id,
@@ -130,6 +171,28 @@ internal fun List<MediaVideo>.primaryTrailerUrl(): String? =
     firstOrNull { it.type.equals("Trailer", ignoreCase = true) && it.official }?.youtubeUrl
         ?: firstOrNull { it.type.equals("Trailer", ignoreCase = true) }?.youtubeUrl
         ?: firstNotNullOfOrNull { it.youtubeUrl }
+
+internal fun TvSeason.toUi(): TvSeasonUi = TvSeasonUi(
+    id = id,
+    name = name,
+    posterUrl = posterPath?.let { POSTER_BASE + it },
+    airYear = airDate?.year?.toString(),
+    seasonNumber = seasonNumber,
+    episodeCount = episodeCount,
+    rating = voteAverage,
+)
+
+internal fun TvEpisode.toUi(): TvEpisodeUi = TvEpisodeUi(
+    id = id,
+    title = name,
+    stillUrl = stillPath?.let { BACKDROP_BASE + it },
+    airDate = airDate?.toString(),
+    seasonNumber = seasonNumber,
+    episodeNumber = episodeNumber,
+    runtime = runtimeMinutes?.let { formatRuntime(it) },
+    rating = voteAverage,
+    overview = overview,
+)
 
 private fun ExternalRatings.toUi(): ExternalRatingsUi = ExternalRatingsUi(
     imdb = imdb?.let { "$it/10" },

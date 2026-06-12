@@ -8,6 +8,7 @@ import com.example.tmdb.core.database.TmdbDatabase
 import com.example.tmdb.core.network.OmdbApi
 import com.example.tmdb.core.network.TmdbApi
 import com.example.tmdb.domain.model.AppError
+import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.model.MovieId
 import com.example.tmdb.domain.model.appErrorOrNull
 import kotlinx.coroutines.CoroutineDispatcher
@@ -92,6 +93,39 @@ class MovieDetailRepositoryTest {
             assertEquals(139, detail?.runtimeMinutes)
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    @Test
+    fun `given an uncached series, when refreshing tv detail, then observers see tv metadata`() = runTest {
+        server.enqueue(MockResponse.Builder().code(200).body(fixture("tv_detail_1396.json")).build())
+
+        repository.refreshMovieDetail(MovieId(1396), MediaType.TV).getOrThrow()
+
+        val requestUrl = server.takeRequest().url
+        assertEquals("/tv/1396?append_to_response=credits%2Ccontent_ratings%2Csimilar%2Cwatch%2Fproviders", "${requestUrl.encodedPath}?${requestUrl.encodedQuery}")
+        repository.observeMovieDetail(MovieId(1396)).test {
+            val detail = awaitItem()
+            assertEquals("Breaking Bad", detail?.title)
+            assertEquals(5, detail?.numberOfSeasons)
+            assertEquals(62, detail?.numberOfEpisodes)
+            assertEquals("Ended", detail?.status)
+            assertEquals("Season 1", detail?.seasons?.firstOrNull()?.name)
+            assertEquals("Felina", detail?.lastEpisodeToAir?.name)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun `given a series season request, when loading season, then endpoint maps episodes`() = runTest {
+        server.enqueue(MockResponse.Builder().code(200).body(fixture("tv_season_1396_1.json")).build())
+
+        val season = repository.tvSeason(MovieId(1396), seasonNumber = 1).getOrThrow()
+
+        val requestUrl = server.takeRequest().url
+        assertEquals("/tv/1396/season/1", requestUrl.encodedPath)
+        assertEquals("Season 1", season.name)
+        assertEquals("Pilot", season.episodes.first().name)
+        assertEquals(58, season.episodes.first().runtimeMinutes)
     }
 
     @Test

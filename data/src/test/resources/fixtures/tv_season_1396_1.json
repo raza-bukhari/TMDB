@@ -1,0 +1,24 @@
+{
+  "air_date": "2008-01-20",
+  "episode_count": 7,
+  "id": 3572,
+  "name": "Season 1",
+  "overview": "",
+  "poster_path": "/season1.jpg",
+  "season_number": 1,
+  "vote_average": 8.3,
+  "episodes": [
+    {
+      "air_date": "2008-01-20",
+      "episode_number": 1,
+      "id": 62085,
+      "name": "Pilot",
+      "overview": "Walter White starts cooking.",
+      "runtime": 58,
+      "season_number": 1,
+      "still_path": "/pilot.jpg",
+      "vote_average": 8.2,
+      "vote_count": 80
+    }
+  ]
+}

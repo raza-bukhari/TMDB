@@ -10,9 +10,12 @@ import com.example.tmdb.domain.model.ExternalRatings
 import com.example.tmdb.domain.model.MediaVideo
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
+import com.example.tmdb.domain.model.TvEpisode
+import com.example.tmdb.domain.model.TvSeason
 import com.example.tmdb.domain.usecase.AddMovieToWatchlistUseCase
 import com.example.tmdb.domain.usecase.GetExternalRatingsUseCase
 import com.example.tmdb.domain.usecase.GetMediaVideosUseCase
+import com.example.tmdb.domain.usecase.GetTvSeasonUseCase
 import com.example.tmdb.domain.usecase.ObserveMovieDetailUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistIdsUseCase
 import com.example.tmdb.domain.usecase.RefreshMovieDetailUseCase
@@ -24,6 +27,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.time.LocalDate
 
 @RunWith(RobolectricTestRunner::class)
 class MovieDetailViewModelTest {
@@ -48,12 +52,13 @@ class MovieDetailViewModelTest {
         imdbId = "tt0137523",
     )
 
-    private fun viewModel() = MovieDetailViewModel(
-        savedStateHandle = SavedStateHandle(mapOf("movieId" to 550L)),
+    private fun viewModel(mediaType: String = "MOVIE") = MovieDetailViewModel(
+        savedStateHandle = SavedStateHandle(mapOf("movieId" to 550L, "mediaType" to mediaType)),
         observeMovieDetail = ObserveMovieDetailUseCase(repository),
         refreshMovieDetail = RefreshMovieDetailUseCase(repository),
         getExternalRatings = GetExternalRatingsUseCase(repository),
         getMediaVideos = GetMediaVideosUseCase(repository),
+        getTvSeason = GetTvSeasonUseCase(repository),
         observeWatchlistIds = ObserveWatchlistIdsUseCase(repository),
         addMovieToWatchlist = AddMovieToWatchlistUseCase(repository),
         removeMovieFromWatchlist = RemoveMovieFromWatchlistUseCase(repository),
@@ -154,6 +159,67 @@ class MovieDetailViewModelTest {
                 "https://www.youtube.com/watch?v=abc123",
                 (state.content as MovieDetailContent.Detail).detail.trailerUrl,
             )
+        }
+    }
+
+    @Test
+    fun `given tv detail has seasons, when first season loads, then detail exposes episodes`() = runTest {
+        repository.onDetailRefreshCachePopulation = {
+            aDetail.copy(
+                title = "Breaking Bad",
+                seasons = listOf(
+                    TvSeason(
+                        id = 10,
+                        name = "Season 1",
+                        overview = "",
+                        posterPath = "/season.jpg",
+                        airDate = LocalDate.of(2008, 1, 20),
+                        seasonNumber = 1,
+                        episodeCount = 7,
+                        voteAverage = 8.5,
+                    ),
+                ),
+                numberOfSeasons = 5,
+                numberOfEpisodes = 62,
+            )
+        }
+        repository.tvSeasonResult = Result.success(
+            TvSeason(
+                id = 10,
+                name = "Season 1",
+                overview = "",
+                posterPath = "/season.jpg",
+                airDate = LocalDate.of(2008, 1, 20),
+                seasonNumber = 1,
+                episodeCount = 7,
+                voteAverage = 8.5,
+                episodes = listOf(
+                    TvEpisode(
+                        id = 101,
+                        name = "Pilot",
+                        overview = "A chemistry teacher changes lanes.",
+                        stillPath = "/pilot.jpg",
+                        airDate = LocalDate.of(2008, 1, 20),
+                        seasonNumber = 1,
+                        episodeNumber = 1,
+                        runtimeMinutes = 58,
+                        voteAverage = 8.3,
+                        voteCount = 100,
+                    ),
+                ),
+            ),
+        )
+
+        viewModel(mediaType = "TV").uiState.test {
+            val state = expectMostRecentItemAfter {
+                (it.content as? MovieDetailContent.Detail)?.detail?.episodes?.isNotEmpty() == true
+            }
+
+            val detail = (state.content as MovieDetailContent.Detail).detail
+            assertEquals("Breaking Bad", detail.title)
+            assertEquals("Pilot", detail.episodes.first().title)
+            assertEquals(5, detail.seasonCount)
+            assertEquals(62, detail.episodeCount)
         }
     }
 

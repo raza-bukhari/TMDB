@@ -3,10 +3,10 @@ package com.example.tmdb.core.database
 import androidx.room.Database
 import androidx.room.RoomDatabase
 
-// v4 added MovieRemoteKeysEntity for Paging 3.
+// v7 added TV season and episode detail fields.
 @Database(
     entities = [MovieEntity::class, MovieDetailEntity::class, MovieRemoteKeysEntity::class, WatchlistMovieEntity::class],
-    version = 6, // v6: local watchlist
+    version = 7,
     exportSchema = false
 )
 abstract class TmdbDatabase : RoomDatabase() {

@@ -9,6 +9,8 @@ import com.example.tmdb.core.network.dto.MovieDetailDto
 import com.example.tmdb.core.network.dto.MovieDto
 import com.example.tmdb.core.network.dto.OmdbResponseDto
 import com.example.tmdb.core.network.dto.PagedResponseDto
+import com.example.tmdb.core.network.dto.TvEpisodeDto
+import com.example.tmdb.core.network.dto.TvSeasonDto
 import com.example.tmdb.core.network.dto.VideoDto
 import com.example.tmdb.core.network.dto.WatchProviderDto
 import com.example.tmdb.domain.model.CastMember
@@ -20,6 +22,8 @@ import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
 import com.example.tmdb.domain.model.SearchResults
+import com.example.tmdb.domain.model.TvEpisode
+import com.example.tmdb.domain.model.TvSeason
 import com.example.tmdb.domain.model.WatchProvider
 import java.time.LocalDate
 import kotlinx.serialization.encodeToString
@@ -57,6 +61,9 @@ internal fun MovieDetailDto.toEntity(): MovieDetailEntity = MovieDetailEntity(
     backdropPath = backdropPath,
     releaseDate = displayDate,
     runtimeMinutes = runtime ?: episodeRunTime.firstOrNull(),
+    numberOfSeasons = numberOfSeasons,
+    numberOfEpisodes = numberOfEpisodes,
+    status = status?.takeIf { it.isNotBlank() },
     voteAverage = voteAverage,
     voteCount = voteCount,
     genres = genres.map { it.name }.filter { it.isNotBlank() }.joinToString(GENRE_SEPARATOR),
@@ -64,6 +71,9 @@ internal fun MovieDetailDto.toEntity(): MovieDetailEntity = MovieDetailEntity(
     crewJson = credits?.crew?.let { json.encodeToString(it) },
     similarMoviesJson = similar?.results?.take(10)?.let { json.encodeToString(it) },
     providersJson = watchProviders?.results?.get("US")?.flatrate?.let { json.encodeToString(it) },
+    seasonsJson = seasons.filter { it.seasonNumber > 0 }.let { if (it.isEmpty()) null else json.encodeToString(it) },
+    lastEpisodeJson = lastEpisodeToAir?.let { json.encodeToString(it) },
+    nextEpisodeJson = nextEpisodeToAir?.let { json.encodeToString(it) },
     certification = releaseDates?.results?.find { it.iso31661 == "US" }?.releaseDates?.find { it.certification.isNotBlank() }?.certification,
     imdbId = imdbId?.takeIf { it.isNotBlank() },
 )
@@ -73,6 +83,9 @@ internal fun MovieDetailEntity.toDomain(): MovieDetail {
     val crewDtos = crewJson?.let { runCatching { json.decodeFromString<List<CrewMemberDto>>(it) }.getOrNull() } ?: emptyList()
     val similarDtos = similarMoviesJson?.let { runCatching { json.decodeFromString<List<MovieDto>>(it) }.getOrNull() } ?: emptyList()
     val providerDtos = providersJson?.let { runCatching { json.decodeFromString<List<WatchProviderDto>>(it) }.getOrNull() } ?: emptyList()
+    val seasonDtos = seasonsJson?.let { runCatching { json.decodeFromString<List<TvSeasonDto>>(it) }.getOrNull() } ?: emptyList()
+    val lastEpisode = lastEpisodeJson?.let { runCatching { json.decodeFromString<TvEpisodeDto>(it) }.getOrNull() }
+    val nextEpisode = nextEpisodeJson?.let { runCatching { json.decodeFromString<TvEpisodeDto>(it) }.getOrNull() }
 
     return MovieDetail(
         id = MovieId(id),
@@ -83,9 +96,15 @@ internal fun MovieDetailEntity.toDomain(): MovieDetail {
         backdropPath = backdropPath,
         releaseDate = parseDate(releaseDate),
         runtimeMinutes = runtimeMinutes,
+        numberOfSeasons = numberOfSeasons,
+        numberOfEpisodes = numberOfEpisodes,
+        status = status,
         voteAverage = voteAverage,
         voteCount = voteCount,
         genres = genres.split(GENRE_SEPARATOR).filter { it.isNotBlank() },
+        seasons = seasonDtos.map { it.toDomain() },
+        lastEpisodeToAir = lastEpisode?.toDomain(),
+        nextEpisodeToAir = nextEpisode?.toDomain(),
         cast = castDtos.map { it.toDomain() },
         directors = crewDtos.filter { it.job == "Director" }.map { it.name },
         producers = crewDtos.filter { it.job == "Producer" || it.job == "Executive Producer" }.map { it.name },
@@ -127,6 +146,31 @@ internal fun VideoDto.toDomain(): MediaVideo = MediaVideo(
     site = site,
     type = type,
     official = official,
+)
+
+internal fun TvSeasonDto.toDomain(): TvSeason = TvSeason(
+    id = id,
+    name = name.ifBlank { "Season $seasonNumber" },
+    overview = overview,
+    posterPath = posterPath,
+    airDate = parseDate(airDate),
+    seasonNumber = seasonNumber,
+    episodeCount = episodeCount.takeIf { it > 0 } ?: episodes.size,
+    voteAverage = voteAverage,
+    episodes = episodes.map { it.toDomain() },
+)
+
+internal fun TvEpisodeDto.toDomain(): TvEpisode = TvEpisode(
+    id = id,
+    name = name.ifBlank { "Episode $episodeNumber" },
+    overview = overview,
+    stillPath = stillPath,
+    airDate = parseDate(airDate),
+    seasonNumber = seasonNumber,
+    episodeNumber = episodeNumber,
+    runtimeMinutes = runtime,
+    voteAverage = voteAverage,
+    voteCount = voteCount,
 )
 
 // Search results skip Room entirely (D-006), so DTOs map straight to domain.

@@ -14,6 +14,7 @@ import com.example.tmdb.domain.model.appErrorOrNull
 import com.example.tmdb.domain.usecase.AddMovieToWatchlistUseCase
 import com.example.tmdb.domain.usecase.GetExternalRatingsUseCase
 import com.example.tmdb.domain.usecase.GetMediaVideosUseCase
+import com.example.tmdb.domain.usecase.GetTvSeasonUseCase
 import com.example.tmdb.domain.usecase.ObserveMovieDetailUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistIdsUseCase
 import com.example.tmdb.domain.usecase.RefreshMovieDetailUseCase
@@ -25,7 +26,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
+import kotlinx.collections.immutable.toImmutableList
 
 internal class MovieDetailViewModel(
     savedStateHandle: SavedStateHandle,
@@ -33,6 +36,7 @@ internal class MovieDetailViewModel(
     private val refreshMovieDetail: RefreshMovieDetailUseCase,
     private val getExternalRatings: GetExternalRatingsUseCase,
     private val getMediaVideos: GetMediaVideosUseCase,
+    private val getTvSeason: GetTvSeasonUseCase,
     private val observeWatchlistIds: ObserveWatchlistIdsUseCase,
     private val addMovieToWatchlist: AddMovieToWatchlistUseCase,
     private val removeMovieFromWatchlist: RemoveMovieFromWatchlistUseCase,
@@ -54,7 +58,9 @@ internal class MovieDetailViewModel(
     private val refreshError = MutableStateFlow<AppError?>(null)
     private val externalRatings = MutableStateFlow(ExternalRatings())
     private val trailerUrl = MutableStateFlow<String?>(null)
+    private val seasonEpisodes = MutableStateFlow<List<TvEpisodeUi>>(emptyList())
     private var latestDetail: MovieDetail? = null
+    private var loadedSeasonNumber: Int? = null
 
     private val detailState =
         combine(detailFlow, isRefreshing, refreshError, externalRatings, watchlistIds) { detail, refreshing, error, ratings, savedIds ->
@@ -68,7 +74,7 @@ internal class MovieDetailViewModel(
         }
 
     val uiState: StateFlow<MovieDetailUiState> =
-        combine(detailState, trailerUrl) { detailState, trailer ->
+        combine(detailState, trailerUrl, seasonEpisodes) { detailState, trailer, episodes ->
             val detail = detailState.detail
             latestDetail = detail
             MovieDetailUiState(
@@ -78,7 +84,10 @@ internal class MovieDetailViewModel(
                         detail.toUi(
                             externalRatings = detailState.ratings,
                             isWatchlisted = detail.id in detailState.savedIds,
-                        ).copy(trailerUrl = trailer),
+                        ).copy(
+                            trailerUrl = trailer,
+                            episodes = episodes.toImmutableList(),
+                        ),
                     )
                     detailState.refreshing -> MovieDetailContent.Loading
                     detailState.error != null -> MovieDetailContent.Error(detailState.error)
@@ -95,6 +104,7 @@ internal class MovieDetailViewModel(
     init {
         refresh()
         observeExternalRatings()
+        observeSeasonEpisodes()
         loadVideos()
     }
 
@@ -140,6 +150,24 @@ internal class MovieDetailViewModel(
             trailerUrl.value = getMediaVideos(movieId, mediaType)
                 .getOrDefault(emptyList())
                 .primaryTrailerUrl()
+        }
+    }
+
+    private fun observeSeasonEpisodes() {
+        viewModelScope.launch {
+            detailFlow
+                .filterNotNull()
+                .map { detail -> detail.seasons.firstOrNull()?.seasonNumber }
+                .distinctUntilChanged()
+                .collect { seasonNumber ->
+                    if (mediaType != MediaType.TV || seasonNumber == null || loadedSeasonNumber == seasonNumber) return@collect
+                    loadedSeasonNumber = seasonNumber
+                    seasonEpisodes.value = getTvSeason(movieId, seasonNumber)
+                        .getOrNull()
+                        ?.episodes
+                        ?.map { it.toUi() }
+                        .orEmpty()
+                }
         }
     }
 

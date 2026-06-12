@@ -10,6 +10,8 @@ import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieCategory
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
+import com.example.tmdb.domain.model.TvEpisode
+import com.example.tmdb.domain.model.TvSeason
 import com.example.tmdb.domain.repository.MovieRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -129,4 +131,37 @@ class FakeMovieRepository : MovieRepository {
     var videosResult: Result<List<MediaVideo>> = Result.success(emptyList())
 
     override suspend fun videos(id: MovieId, mediaType: MediaType): Result<List<MediaVideo>> = videosResult
+
+    var tvSeasonResult: Result<TvSeason> = Result.success(
+        TvSeason(
+            id = 1,
+            name = "Season 1",
+            overview = "",
+            posterPath = null,
+            airDate = null,
+            seasonNumber = 1,
+            episodeCount = 0,
+            voteAverage = 0.0,
+        ),
+    )
+
+    override suspend fun tvSeason(seriesId: MovieId, seasonNumber: Int): Result<TvSeason> = tvSeasonResult
+
+    var tvEpisodeResult: Result<TvEpisode> = Result.success(
+        TvEpisode(
+            id = 1,
+            name = "Episode 1",
+            overview = "",
+            stillPath = null,
+            airDate = null,
+            seasonNumber = 1,
+            episodeNumber = 1,
+            runtimeMinutes = null,
+            voteAverage = 0.0,
+            voteCount = 0,
+        ),
+    )
+
+    override suspend fun tvEpisode(seriesId: MovieId, seasonNumber: Int, episodeNumber: Int): Result<TvEpisode> =
+        tvEpisodeResult
 }

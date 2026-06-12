@@ -277,7 +277,9 @@ private fun DetailInfo(
                 }
                 detail.releaseYear?.let { Text(it, style = MaterialTheme.typography.labelLarge) }
                 detail.runtime?.let { Text(it, style = MaterialTheme.typography.labelLarge) }
+                detail.status?.let { Text(it, style = MaterialTheme.typography.labelLarge) }
             }
+            SeriesStatsRow(detail)
             if (detail.genres.isNotEmpty()) {
                 Text(
                     text = detail.genres.joinToString(" · "),
@@ -289,6 +291,21 @@ private fun DetailInfo(
                 text = detail.overview,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        if (detail.seasons.isNotEmpty()) {
+            SeasonsSection(detail.seasons)
+        }
+
+        if (detail.episodes.isNotEmpty()) {
+            EpisodesSection(detail.episodes)
+        }
+
+        if (detail.lastEpisode != null || detail.nextEpisode != null) {
+            EpisodeMilestonesSection(
+                lastEpisode = detail.lastEpisode,
+                nextEpisode = detail.nextEpisode,
             )
         }
 
@@ -428,6 +445,165 @@ private fun DetailInfo(
 }
 
 @Composable
+private fun SeriesStatsRow(detail: MovieDetailUi) {
+    val chips = buildList {
+        detail.seasonCount?.let { add(if (it == 1) "1 season" else "$it seasons") }
+        detail.episodeCount?.let { add(if (it == 1) "1 episode" else "$it episodes") }
+    }
+    if (chips.isEmpty()) return
+
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        chips.forEach { chip ->
+            GlassSurface(cornerRadius = 999.dp, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)) {
+                Text(
+                    text = chip,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SeasonsSection(seasons: List<TvSeasonUi>) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "Seasons",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        )
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            items(seasons, key = { it.id }) { season ->
+                GlassSurface(
+                    modifier = Modifier.width(132.dp),
+                    contentPadding = PaddingValues(8.dp),
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        AsyncImage(
+                            model = season.posterUrl,
+                            contentDescription = season.name,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(2f / 3f)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                        )
+                        Text(
+                            text = season.name,
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = listOfNotNull(
+                                season.airYear,
+                                "${season.episodeCount} eps",
+                            ).joinToString(" · "),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EpisodesSection(episodes: List<TvEpisodeUi>) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "Episodes",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        )
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            episodes.take(8).forEach { episode ->
+                EpisodeRow(episode)
+            }
+        }
+    }
+}
+
+@Composable
+private fun EpisodeMilestonesSection(
+    lastEpisode: TvEpisodeUi?,
+    nextEpisode: TvEpisodeUi?,
+) {
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        lastEpisode?.let { EpisodeMilestoneCard("Last Episode", it) }
+        nextEpisode?.let { EpisodeMilestoneCard("Next Episode", it) }
+    }
+}
+
+@Composable
+private fun EpisodeMilestoneCard(label: String, episode: TvEpisodeUi) {
+    GlassSurface(contentPadding = PaddingValues(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
+            Text(text = "S${episode.seasonNumber} E${episode.episodeNumber} · ${episode.title}", style = MaterialTheme.typography.titleSmall)
+            episode.airDate?.let {
+                Text(text = it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun EpisodeRow(episode: TvEpisodeUi) {
+    GlassSurface(contentPadding = PaddingValues(10.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            AsyncImage(
+                model = episode.stillUrl,
+                contentDescription = episode.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .width(112.dp)
+                    .aspectRatio(16f / 9f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(
+                    text = "E${episode.episodeNumber} · ${episode.title}",
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                val meta = listOfNotNull(episode.airDate, episode.runtime).joinToString(" · ")
+                if (meta.isNotBlank()) {
+                    Text(
+                        text = meta,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (episode.overview.isNotBlank()) {
+                    Text(
+                        text = episode.overview,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun DetailWatchlistButton(
     isWatchlisted: Boolean,
     onClick: () -> Unit,
@@ -536,9 +712,16 @@ private fun MovieDetailPreview() {
                         backdropUrl = null,
                         releaseYear = "1999",
                         runtime = "2h 19m",
+                        status = null,
+                        seasonCount = null,
+                        episodeCount = null,
                         rating = 8.4,
                         certification = "R",
                         genres = persistentListOf("Drama", "Thriller"),
+                        seasons = persistentListOf(),
+                        episodes = persistentListOf(),
+                        lastEpisode = null,
+                        nextEpisode = null,
                         cast = persistentListOf(),
                         directors = persistentListOf("David Fincher"),
                         producers = persistentListOf(),

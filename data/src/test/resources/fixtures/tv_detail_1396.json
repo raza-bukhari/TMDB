@@ -1,0 +1,43 @@
+{
+  "backdrop_path": "/backdrop.jpg",
+  "episode_run_time": [47],
+  "first_air_date": "2008-01-20",
+  "genres": [
+    { "id": 18, "name": "Drama" }
+  ],
+  "id": 1396,
+  "name": "Breaking Bad",
+  "number_of_episodes": 62,
+  "number_of_seasons": 5,
+  "overview": "A chemistry teacher diagnosed with cancer turns to manufacturing methamphetamine.",
+  "poster_path": "/poster.jpg",
+  "seasons": [
+    {
+      "air_date": "2008-01-20",
+      "episode_count": 7,
+      "id": 3572,
+      "name": "Season 1",
+      "overview": "",
+      "poster_path": "/season1.jpg",
+      "season_number": 1,
+      "vote_average": 8.3
+    }
+  ],
+  "last_episode_to_air": {
+    "air_date": "2013-09-29",
+    "episode_number": 16,
+    "id": 62161,
+    "name": "Felina",
+    "overview": "Walter White makes one last attempt to secure his legacy.",
+    "runtime": 55,
+    "season_number": 5,
+    "still_path": "/felina.jpg",
+    "vote_average": 9.6,
+    "vote_count": 100
+  },
+  "next_episode_to_air": null,
+  "status": "Ended",
+  "tagline": "Change the equation.",
+  "vote_average": 8.9,
+  "vote_count": 15000
+}

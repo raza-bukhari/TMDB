@@ -13,6 +13,9 @@ data class MovieDetailEntity(
     val backdropPath: String?,
     val releaseDate: String?,
     val runtimeMinutes: Int?,
+    val numberOfSeasons: Int? = null,
+    val numberOfEpisodes: Int? = null,
+    val status: String? = null,
     val voteAverage: Double,
     val voteCount: Int,
     /** Pipe-joined genre names; a converter would be machinery for one read site. */
@@ -21,6 +24,9 @@ data class MovieDetailEntity(
     val crewJson: String? = null,
     val similarMoviesJson: String? = null,
     val providersJson: String? = null,
+    val seasonsJson: String? = null,
+    val lastEpisodeJson: String? = null,
+    val nextEpisodeJson: String? = null,
     val certification: String? = null,
     val imdbId: String? = null,
 )

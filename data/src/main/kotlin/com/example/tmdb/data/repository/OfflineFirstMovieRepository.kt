@@ -26,6 +26,8 @@ import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieCategory
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
+import com.example.tmdb.domain.model.TvEpisode
+import com.example.tmdb.domain.model.TvSeason
 import com.example.tmdb.domain.repository.MovieRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
@@ -147,5 +149,17 @@ internal class OfflineFirstMovieRepository(
                     )
                     .map { it.toDomain() }
             }
+        }
+
+    override suspend fun tvSeason(seriesId: MovieId, seasonNumber: Int): Result<TvSeason> =
+        withContext(dispatchers.io) {
+            tmdbCall { api.tvSeason(seriesId.value, seasonNumber) }
+                .map { it.toDomain() }
+        }
+
+    override suspend fun tvEpisode(seriesId: MovieId, seasonNumber: Int, episodeNumber: Int): Result<TvEpisode> =
+        withContext(dispatchers.io) {
+            tmdbCall { api.tvEpisode(seriesId.value, seasonNumber, episodeNumber) }
+                .map { it.toDomain() }
         }
 }
