@@ -81,6 +81,7 @@ private val ToolbarHeight = 56.dp
 fun MovieDetailScreen(
     onBackClick: () -> Unit,
     onMovieClick: (Long) -> Unit,
+    onPersonClick: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val viewModel: MovieDetailViewModel = koinViewModel()
@@ -91,6 +92,7 @@ fun MovieDetailScreen(
         state = state,
         onBackClick = onBackClick,
         onMovieClick = onMovieClick,
+        onPersonClick = onPersonClick,
         onRetryClick = viewModel::onRetryClicked,
         onWatchlistToggle = viewModel::onWatchlistToggle,
         onTrailerClick = { url -> uriHandler.openUri(url) },
@@ -103,6 +105,7 @@ internal fun MovieDetailScreenContent(
     state: MovieDetailUiState,
     onBackClick: () -> Unit,
     onMovieClick: (Long) -> Unit,
+    onPersonClick: (Long) -> Unit,
     onRetryClick: () -> Unit,
     onWatchlistToggle: () -> Unit,
     onTrailerClick: (String) -> Unit,
@@ -116,7 +119,7 @@ internal fun MovieDetailScreenContent(
                     ErrorState(message = content.error.toUserMessage(), onRetryClick = onRetryClick)
                     BackButton(onBackClick, scrim = false)
                 }
-                is MovieDetailContent.Detail -> CollapsingDetail(content.detail, onBackClick, onMovieClick, onWatchlistToggle, onTrailerClick)
+                is MovieDetailContent.Detail -> CollapsingDetail(content.detail, onBackClick, onMovieClick, onPersonClick, onWatchlistToggle, onTrailerClick)
             }
         }
     }
@@ -127,6 +130,7 @@ private fun CollapsingDetail(
     detail: MovieDetailUi,
     onBackClick: () -> Unit,
     onMovieClick: (Long) -> Unit,
+    onPersonClick: (Long) -> Unit,
     onWatchlistToggle: () -> Unit,
     onTrailerClick: (String) -> Unit,
 ) {
@@ -170,7 +174,7 @@ private fun CollapsingDetail(
                 .verticalScroll(scroll),
         ) {
             Spacer(Modifier.height(HeaderMaxHeight))
-            DetailInfo(detail, onMovieClick, onWatchlistToggle, onTrailerClick, modifier = Modifier.heightIn(min = infoMinHeight))
+            DetailInfo(detail, onMovieClick, onPersonClick, onWatchlistToggle, onTrailerClick, modifier = Modifier.heightIn(min = infoMinHeight))
         }
 
         Box(
@@ -209,6 +213,7 @@ private fun CollapsingDetail(
 private fun DetailInfo(
     detail: MovieDetailUi,
     onMovieClick: (Long) -> Unit,
+    onPersonClick: (Long) -> Unit,
     onWatchlistToggle: () -> Unit,
     onTrailerClick: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -354,7 +359,9 @@ private fun DetailInfo(
                 ) {
                     items(detail.cast) { member ->
                         Column(
-                            modifier = Modifier.width(100.dp),
+                            modifier = Modifier
+                                .width(100.dp)
+                                .clickable { onPersonClick(member.id) },
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             AsyncImage(
@@ -737,6 +744,7 @@ private fun MovieDetailPreview() {
             ),
             onBackClick = {},
             onMovieClick = {},
+            onPersonClick = {},
             onRetryClick = {},
             onWatchlistToggle = {},
             onTrailerClick = {},

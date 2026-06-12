@@ -14,3 +14,8 @@ data class MovieDetailRoute(
     val movieId: Long,
     val mediaType: String = "MOVIE",
 )
+
+@Serializable
+data class PersonRoute(
+    val personId: Long,
+)

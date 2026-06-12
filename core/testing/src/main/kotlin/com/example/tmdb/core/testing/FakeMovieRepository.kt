@@ -10,6 +10,8 @@ import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieCategory
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
+import com.example.tmdb.domain.model.Person
+import com.example.tmdb.domain.model.PersonCredits
 import com.example.tmdb.domain.model.TvEpisode
 import com.example.tmdb.domain.model.TvSeason
 import com.example.tmdb.domain.model.UserMediaActivity
@@ -193,6 +195,24 @@ class FakeMovieRepository : MovieRepository {
 
     override suspend fun tvEpisode(seriesId: MovieId, seasonNumber: Int, episodeNumber: Int): Result<TvEpisode> =
         tvEpisodeResult
+
+    override suspend fun personDetail(personId: Long): Result<Person> =
+        Result.success(
+            Person(
+                id = personId,
+                name = "Person $personId",
+                biography = "",
+                profilePath = null,
+                birthday = null,
+                deathday = null,
+                placeOfBirth = null,
+                knownForDepartment = null,
+                popularity = 0.0,
+            ),
+        )
+
+    override suspend fun personCredits(personId: Long): Result<PersonCredits> =
+        Result.success(PersonCredits(cast = emptyList(), crew = emptyList()))
 
     private fun Movie.toWatchlistItem(): WatchlistItem = WatchlistItem(
         movie = this,

@@ -7,6 +7,7 @@ import com.example.tmdb.data.di.dataModule
 import com.example.tmdb.domain.di.domainModule
 import com.example.tmdb.feature.detail.di.featureDetailModule
 import com.example.tmdb.feature.movies.di.featureMoviesModule
+import com.example.tmdb.feature.person.di.featurePersonModule
 import com.example.tmdb.feature.search.di.featureSearchModule
 import org.koin.core.module.Module
 
@@ -19,5 +20,6 @@ val appModules: List<Module> = listOf(
     dataModule,
     featureMoviesModule,
     featureDetailModule,
+    featurePersonModule,
     featureSearchModule,
 )

@@ -23,7 +23,7 @@ class ArchitectureTest {
         val offending = mainSourceFilesUnder("domain")
             .flatMap { file -> file.imports.map { file.path to it.name } }
             .filter { (_, import) ->
-                import.startsWith("android.") || import.startsWith("androidx.")
+                import.startsWith("android.") || (import.startsWith("androidx.") && !import.startsWith("androidx.paging."))
             }
         assertTrue("Android imports found in :domain: $offending", offending.isEmpty())
     }

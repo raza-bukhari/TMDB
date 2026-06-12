@@ -9,6 +9,8 @@ import com.example.tmdb.core.network.dto.MovieDetailDto
 import com.example.tmdb.core.network.dto.MovieDto
 import com.example.tmdb.core.network.dto.OmdbResponseDto
 import com.example.tmdb.core.network.dto.PagedResponseDto
+import com.example.tmdb.core.network.dto.PersonCombinedCreditsDto
+import com.example.tmdb.core.network.dto.PersonDto
 import com.example.tmdb.core.network.dto.TvEpisodeDto
 import com.example.tmdb.core.network.dto.TvSeasonDto
 import com.example.tmdb.core.network.dto.VideoDto
@@ -21,6 +23,8 @@ import com.example.tmdb.domain.model.MediaVideo
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
+import com.example.tmdb.domain.model.Person
+import com.example.tmdb.domain.model.PersonCredits
 import com.example.tmdb.domain.model.SearchResults
 import com.example.tmdb.domain.model.TvEpisode
 import com.example.tmdb.domain.model.TvSeason
@@ -174,6 +178,23 @@ internal fun TvEpisodeDto.toDomain(): TvEpisode = TvEpisode(
     runtimeMinutes = runtime,
     voteAverage = voteAverage,
     voteCount = voteCount,
+)
+
+internal fun PersonDto.toDomain(): Person = Person(
+    id = id,
+    name = name,
+    biography = biography,
+    profilePath = profilePath,
+    birthday = parseDate(birthday),
+    deathday = parseDate(deathday),
+    placeOfBirth = placeOfBirth?.takeIf { it.isNotBlank() },
+    knownForDepartment = knownForDepartment?.takeIf { it.isNotBlank() },
+    popularity = popularity,
+)
+
+internal fun PersonCombinedCreditsDto.toDomain(): PersonCredits = PersonCredits(
+    cast = cast.map { it.toDomain() },
+    crew = crew.map { it.toDomain() },
 )
 
 // Search results skip Room entirely (D-006), so DTOs map straight to domain.

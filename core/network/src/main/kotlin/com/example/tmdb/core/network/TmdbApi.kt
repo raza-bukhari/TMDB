@@ -3,6 +3,8 @@ package com.example.tmdb.core.network
 import com.example.tmdb.core.network.dto.MovieDetailDto
 import com.example.tmdb.core.network.dto.MovieDto
 import com.example.tmdb.core.network.dto.PagedResponseDto
+import com.example.tmdb.core.network.dto.PersonCombinedCreditsDto
+import com.example.tmdb.core.network.dto.PersonDto
 import com.example.tmdb.core.network.dto.TvEpisodeDto
 import com.example.tmdb.core.network.dto.TvSeasonDto
 import com.example.tmdb.core.network.dto.VideosResponseDto
@@ -72,6 +74,16 @@ interface TmdbApi {
         @Path("season_number") seasonNumber: Int,
         @Path("episode_number") episodeNumber: Int,
     ): TvEpisodeDto
+
+    @GET("person/{person_id}")
+    suspend fun personDetail(
+        @Path("person_id") personId: Long,
+    ): PersonDto
+
+    @GET("person/{person_id}/combined_credits")
+    suspend fun personCombinedCredits(
+        @Path("person_id") personId: Long,
+    ): PersonCombinedCreditsDto
 
     @GET("search/movie")
     suspend fun searchMovies(

@@ -24,9 +24,11 @@ import com.example.tmdb.core.designsystem.theme.TMDBTheme
 import com.example.tmdb.core.designsystem.theme.ThemeMode
 import com.example.tmdb.core.navigation.MovieDetailRoute
 import com.example.tmdb.core.navigation.MoviesRoute
+import com.example.tmdb.core.navigation.PersonRoute
 import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.feature.detail.MovieDetailScreen
 import com.example.tmdb.feature.movies.MoviesScreen
+import com.example.tmdb.feature.person.PersonScreen
 
 private const val NAV_ANIM_MS = 300
 
@@ -67,7 +69,16 @@ class MainActivity : ComponentActivity() {
                     composable<MovieDetailRoute> {
                         MovieDetailScreen(
                             onBackClick = { navController.popBackStack() },
-                            onMovieClick = { movieId -> navController.navigate(MovieDetailRoute(movieId, MediaType.MOVIE.name)) }
+                            onMovieClick = { movieId -> navController.navigate(MovieDetailRoute(movieId, MediaType.MOVIE.name)) },
+                            onPersonClick = { personId -> navController.navigate(PersonRoute(personId)) },
+                        )
+                    }
+                    composable<PersonRoute> {
+                        PersonScreen(
+                            onBackClick = { navController.popBackStack() },
+                            onMediaClick = { mediaId, mediaType ->
+                                navController.navigate(MovieDetailRoute(mediaId, mediaType.name))
+                            },
                         )
                     }
                 }

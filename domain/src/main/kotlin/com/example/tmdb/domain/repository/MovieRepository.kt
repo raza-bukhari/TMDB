@@ -10,6 +10,8 @@ import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieCategory
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
+import com.example.tmdb.domain.model.Person
+import com.example.tmdb.domain.model.PersonCredits
 import com.example.tmdb.domain.model.TvEpisode
 import com.example.tmdb.domain.model.TvSeason
 import com.example.tmdb.domain.model.UserMediaActivity
@@ -60,4 +62,8 @@ interface MovieRepository {
     suspend fun tvSeason(seriesId: MovieId, seasonNumber: Int): Result<TvSeason>
 
     suspend fun tvEpisode(seriesId: MovieId, seasonNumber: Int, episodeNumber: Int): Result<TvEpisode>
+
+    suspend fun personDetail(personId: Long): Result<Person>
+
+    suspend fun personCredits(personId: Long): Result<PersonCredits>
 }

@@ -5,6 +5,8 @@ import com.example.tmdb.domain.usecase.DiscoverMoviesUseCase
 import com.example.tmdb.domain.usecase.GetExternalRatingsUseCase
 import com.example.tmdb.domain.usecase.GetHomeListUseCase
 import com.example.tmdb.domain.usecase.GetMediaVideosUseCase
+import com.example.tmdb.domain.usecase.GetPersonCreditsUseCase
+import com.example.tmdb.domain.usecase.GetPersonDetailUseCase
 import com.example.tmdb.domain.usecase.GetTvEpisodeUseCase
 import com.example.tmdb.domain.usecase.GetTvSeasonUseCase
 import com.example.tmdb.domain.usecase.ObserveMovieDetailUseCase
@@ -22,6 +24,8 @@ import org.koin.dsl.module
 val domainModule = module {
     factoryOf(::GetExternalRatingsUseCase)
     factoryOf(::GetMediaVideosUseCase)
+    factoryOf(::GetPersonCreditsUseCase)
+    factoryOf(::GetPersonDetailUseCase)
     factoryOf(::GetTvEpisodeUseCase)
     factoryOf(::GetTvSeasonUseCase)
     factoryOf(::GetHomeListUseCase)

@@ -27,6 +27,8 @@ import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieCategory
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
+import com.example.tmdb.domain.model.Person
+import com.example.tmdb.domain.model.PersonCredits
 import com.example.tmdb.domain.model.TvEpisode
 import com.example.tmdb.domain.model.TvSeason
 import com.example.tmdb.domain.model.UserMediaActivity
@@ -183,5 +185,15 @@ internal class OfflineFirstMovieRepository(
         withContext(dispatchers.io) {
             tmdbCall { api.tvEpisode(seriesId.value, seasonNumber, episodeNumber) }
                 .map { it.toDomain() }
+        }
+
+    override suspend fun personDetail(personId: Long): Result<Person> =
+        withContext(dispatchers.io) {
+            tmdbCall { api.personDetail(personId) }.map { it.toDomain() }
+        }
+
+    override suspend fun personCredits(personId: Long): Result<PersonCredits> =
+        withContext(dispatchers.io) {
+            tmdbCall { api.personCombinedCredits(personId) }.map { it.toDomain() }
         }
 }
