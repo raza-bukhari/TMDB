@@ -5,6 +5,7 @@ import com.example.tmdb.domain.model.HomeList
 import com.example.tmdb.domain.model.MediaKey
 import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.model.Movie
+import com.example.tmdb.domain.model.MovieGenre
 import com.example.tmdb.domain.model.MovieId
 import com.example.tmdb.domain.model.WatchlistItem
 import com.example.tmdb.domain.model.WatchlistStatus
@@ -144,6 +145,25 @@ internal fun List<WatchlistItemUi>.sortedBy(sort: WatchlistSort): List<Watchlist
     WatchlistSort.RATING -> sortedWith(compareByDescending<WatchlistItemUi> { it.userRating ?: it.movie.rating }.thenBy { it.movie.title })
     WatchlistSort.YEAR -> sortedWith(compareByDescending<WatchlistItemUi> { it.movie.releaseYear?.toIntOrNull() ?: 0 }.thenBy { it.movie.title })
     WatchlistSort.TITLE -> sortedBy { it.movie.title.lowercase() }
+}
+
+internal fun List<WatchlistItemUi>.favoriteGenreNames(limit: Int = 5): List<String> {
+    val weightedGenreCounts = flatMap { item ->
+        val weight = when {
+            item.favorite -> 4
+            (item.userRating ?: 0.0) >= 8.0 -> 3
+            item.status == WatchlistStatus.COMPLETED -> 2
+            else -> 1
+        }
+        item.movie.genreIds.map { genreId -> genreId to weight }
+    }
+        .groupingBy { it.first }
+        .fold(0) { total, (_, weight) -> total + weight }
+
+    return weightedGenreCounts.entries
+        .sortedWith(compareByDescending<Map.Entry<Int, Int>> { it.value }.thenBy { it.key })
+        .mapNotNull { MovieGenre.fromId(it.key)?.displayName }
+        .take(limit)
 }
 
 internal fun MovieListItem.toDomainMovie(): Movie = Movie(

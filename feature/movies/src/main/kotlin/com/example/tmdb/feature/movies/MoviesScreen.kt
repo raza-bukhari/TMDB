@@ -922,6 +922,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.profileContent(
     val favoriteCount = items.count { it.favorite }
     val averageUserRating = items.mapNotNull { it.userRating }.takeIf { it.isNotEmpty() }?.average()
     val recentNotes = items.filter { it.notes.isNotBlank() }.take(3)
+    val favoriteGenres = items.favoriteGenreNames()
 
     item {
         Column(
@@ -942,6 +943,18 @@ private fun androidx.compose.foundation.lazy.LazyListScope.profileContent(
             ProfileMetricRow(label = "Watching / Completed", value = "$watchingCount / $completedCount")
             ProfileMetricRow(label = "Favorites", value = favoriteCount.toString())
             ProfileMetricRow(label = "Average user rating", value = averageUserRating?.let { String.format("%.1f", it) } ?: "Not rated")
+            if (favoriteGenres.isNotEmpty()) {
+                GlassSurface(contentPadding = PaddingValues(14.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(text = "Favorite genres", style = MaterialTheme.typography.titleMedium)
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(favoriteGenres) { genre ->
+                                FilterChipPill(text = genre, selected = true, onClick = {})
+                            }
+                        }
+                    }
+                }
+            }
             GlassSurface(contentPadding = PaddingValues(14.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
