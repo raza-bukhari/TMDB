@@ -9,13 +9,11 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
@@ -53,6 +51,7 @@ import coil3.compose.AsyncImage
 import com.example.tmdb.core.designsystem.ThemePreviews
 import com.example.tmdb.core.designsystem.component.ErrorState
 import com.example.tmdb.core.designsystem.component.PosterCard
+import com.example.tmdb.core.designsystem.component.RatingBadge
 import com.example.tmdb.core.designsystem.theme.TMDBTheme
 import com.example.tmdb.core.designsystem.theme.ThemeMode
 import kotlinx.collections.immutable.persistentListOf
@@ -217,8 +216,18 @@ private fun Hero(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(360.dp),
+            .height(420.dp),
     ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        0f to MaterialTheme.colorScheme.primary,
+                        1f to MaterialTheme.colorScheme.secondary,
+                    ),
+                ),
+        )
         AsyncImage(
             model = movie?.backdropUrl ?: movie?.posterUrl,
             contentDescription = movie?.title,
@@ -229,9 +238,9 @@ private fun Hero(
                     drawContent()
                     drawRect(
                         brush = Brush.verticalGradient(
-                            0f to Color.Black.copy(alpha = 0.25f),
-                            0.68f to Color.Black.copy(alpha = 0.62f),
-                            1f to Color.Black.copy(alpha = 0.88f),
+                            0f to Color.Black.copy(alpha = 0.18f),
+                            0.52f to Color.Black.copy(alpha = 0.56f),
+                            1f to Color.Black.copy(alpha = 0.92f),
                         ),
                     )
                 },
@@ -252,14 +261,16 @@ private fun Hero(
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = "Millions of movies to discover. Explore now.",
+                text = "Find what to watch from trending, popular, theatrical, top rated, and upcoming movies.",
                 style = MaterialTheme.typography.titleMedium,
                 color = Color.White.copy(alpha = 0.9f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(20.dp))
             SearchPill(onSearchClick)
             movie?.let {
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(20.dp))
                 FeaturedMovie(movie = it, onMovieClick = onMovieClick)
             }
         }
@@ -272,35 +283,43 @@ private fun TopBar(
     onToggleTheme: () -> Unit,
     onSearchClick: () -> Unit,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth(),
+    Surface(
+        color = Color.Black.copy(alpha = 0.28f),
+        contentColor = Color.White,
+        shape = RoundedCornerShape(28.dp),
     ) {
-        Text(
-            text = "TMDB",
-            style = MaterialTheme.typography.titleLarge,
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.weight(1f),
-        )
-        TextButton(
-            onClick = onToggleTheme,
-            modifier = Modifier.testTag(MoviesTestTags.THEME),
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
         ) {
             Text(
-                text = when (themeMode) {
-                    ThemeMode.SYSTEM -> "Auto"
-                    ThemeMode.LIGHT -> "Light"
-                    ThemeMode.DARK -> "Dark"
-                },
+                text = "TMDB",
+                style = MaterialTheme.typography.titleLarge,
                 color = Color.White,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
             )
-        }
-        IconButton(
-            onClick = onSearchClick,
-            modifier = Modifier.testTag(MoviesTestTags.SEARCH),
-        ) {
-            Icon(Icons.Filled.Search, contentDescription = "Search movies", tint = Color.White)
+            TextButton(
+                onClick = onToggleTheme,
+                modifier = Modifier.testTag(MoviesTestTags.THEME),
+            ) {
+                Text(
+                    text = when (themeMode) {
+                        ThemeMode.SYSTEM -> "Auto"
+                        ThemeMode.LIGHT -> "Light"
+                        ThemeMode.DARK -> "Dark"
+                    },
+                    color = Color.White,
+                )
+            }
+            IconButton(
+                onClick = onSearchClick,
+                modifier = Modifier.testTag(MoviesTestTags.SEARCH),
+            ) {
+                Icon(Icons.Filled.Search, contentDescription = "Search movies", tint = Color.White)
+            }
         }
     }
 }
@@ -308,7 +327,7 @@ private fun TopBar(
 @Composable
 private fun SearchPill(onSearchClick: () -> Unit) {
     Surface(
-        color = Color.White,
+        color = Color.White.copy(alpha = 0.96f),
         contentColor = Color.Black,
         shape = RoundedCornerShape(28.dp),
         modifier = Modifier
@@ -338,6 +357,7 @@ private fun FeaturedMovie(movie: MovieListItem, onMovieClick: (Long) -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onMovieClick(movie.id) },
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
             text = movie.title,
@@ -346,6 +366,11 @@ private fun FeaturedMovie(movie: MovieListItem, onMovieClick: (Long) -> Unit) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            RatingBadge(rating = movie.rating)
+            movie.releaseYear?.let { HeroMetaChip(it) }
+            HeroMetaChip("${movie.voteCount} votes")
+        }
         Text(
             text = movie.overview,
             style = MaterialTheme.typography.bodyMedium,
@@ -357,18 +382,40 @@ private fun FeaturedMovie(movie: MovieListItem, onMovieClick: (Long) -> Unit) {
 }
 
 @Composable
+private fun HeroMetaChip(text: String) {
+    Surface(
+        color = Color.White.copy(alpha = 0.14f),
+        contentColor = Color.White,
+        shape = RoundedCornerShape(12.dp),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+        )
+    }
+}
+
+@Composable
 private fun MovieSection(
     section: HomeSectionUi,
     trendingWindow: TrendingWindow,
     onTrendingWindowSelected: (TrendingWindow) -> Unit,
     onMovieClick: (Long) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = 16.dp),
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(42.dp)
+                    .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp)),
+            )
+            Spacer(Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(text = section.title, style = MaterialTheme.typography.titleLarge)
                 Text(
                     text = section.subtitle,
@@ -386,7 +433,7 @@ private fun MovieSection(
 
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             items(section.movies, key = { it.id }) { movie ->
                 HomeMovieCard(movie = movie, onMovieClick = onMovieClick)
@@ -450,7 +497,7 @@ private fun HomeMovieCard(movie: MovieListItem, onMovieClick: (Long) -> Unit) {
         subtitle = movie.releaseYear ?: "${movie.voteCount} votes",
         onClick = { onMovieClick(movie.id) },
         modifier = Modifier
-            .width(132.dp)
+            .width(140.dp)
             .testTag(MoviesTestTags.movieCard(movie.id)),
     ) {
         AsyncImage(
