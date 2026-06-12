@@ -70,8 +70,9 @@ import com.example.tmdb.core.designsystem.component.FilterChipPill
 import com.example.tmdb.core.designsystem.component.GlassSurface
 import com.example.tmdb.core.designsystem.component.PosterCard
 import com.example.tmdb.core.designsystem.component.RatingBadge
+import com.example.tmdb.core.designsystem.component.ThemePicker
 import com.example.tmdb.core.designsystem.theme.TMDBTheme
-import com.example.tmdb.core.designsystem.theme.ThemeMode
+import com.example.tmdb.core.designsystem.theme.AppTheme
 import com.example.tmdb.domain.model.MediaKey
 import kotlinx.collections.immutable.persistentListOf
 import org.koin.androidx.compose.koinViewModel
@@ -99,8 +100,8 @@ object MoviesTestTags {
 @Composable
 fun MoviesScreen(
     onMovieClick: (Long, com.example.tmdb.domain.model.MediaType) -> Unit,
-    themeMode: ThemeMode,
-    onToggleTheme: () -> Unit,
+    selectedTheme: AppTheme,
+    onThemeSelected: (AppTheme) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val viewModel: MoviesViewModel = koinViewModel()
@@ -118,8 +119,8 @@ fun MoviesScreen(
 
     MoviesScreenContent(
         state = state,
-        themeMode = themeMode,
-        onToggleTheme = onToggleTheme,
+        selectedTheme = selectedTheme,
+        onThemeSelected = onThemeSelected,
         searchResults = searchResults,
         discoverResults = discoverResults,
         onSearchQueryChanged = viewModel::onSearchQueryChanged,
@@ -142,8 +143,8 @@ fun MoviesScreen(
 @Composable
 internal fun MoviesScreenContent(
     state: MoviesUiState,
-    themeMode: ThemeMode,
-    onToggleTheme: () -> Unit,
+    selectedTheme: AppTheme,
+    onThemeSelected: (AppTheme) -> Unit,
     searchResults: LazyPagingItems<MovieListItem>?,
     discoverResults: LazyPagingItems<MovieListItem>?,
     onSearchQueryChanged: (String) -> Unit,
@@ -175,8 +176,8 @@ internal fun MoviesScreenContent(
                     ) {
                         HomeFeed(
                             state = state,
-                            themeMode = themeMode,
-                            onToggleTheme = onToggleTheme,
+                            selectedTheme = selectedTheme,
+                            onThemeSelected = onThemeSelected,
                             searchResults = searchResults,
                             discoverResults = discoverResults,
                             onSearchQueryChanged = onSearchQueryChanged,
@@ -212,8 +213,8 @@ private fun LoadingHome() {
 @Composable
 private fun HomeFeed(
     state: MoviesUiState,
-    themeMode: ThemeMode,
-    onToggleTheme: () -> Unit,
+    selectedTheme: AppTheme,
+    onThemeSelected: (AppTheme) -> Unit,
     searchResults: LazyPagingItems<MovieListItem>?,
     discoverResults: LazyPagingItems<MovieListItem>?,
     onSearchQueryChanged: (String) -> Unit,
@@ -239,8 +240,8 @@ private fun HomeFeed(
                 CompactSearchHeader(
                     query = state.searchQuery,
                     onQueryChanged = onSearchQueryChanged,
-                    themeMode = themeMode,
-                    onToggleTheme = onToggleTheme,
+                    selectedTheme = selectedTheme,
+                    onThemeSelected = onThemeSelected,
                 )
             }
             searchResults?.let {
@@ -257,8 +258,8 @@ private fun HomeFeed(
                     item {
                         Hero(
                             movie = state.hero,
-                            themeMode = themeMode,
-                            onToggleTheme = onToggleTheme,
+                            selectedTheme = selectedTheme,
+                            onThemeSelected = onThemeSelected,
                             searchQuery = state.searchQuery,
                             onSearchQueryChanged = onSearchQueryChanged,
                             onMovieClick = onMovieClick,
@@ -343,8 +344,8 @@ private fun HomeFeed(
                 )
                 MoviesTab.PROFILE -> profileContent(
                     items = state.watchlistItems,
-                    themeMode = themeMode,
-                    onToggleTheme = onToggleTheme,
+                    selectedTheme = selectedTheme,
+                    onThemeSelected = onThemeSelected,
                 )
             }
         }
@@ -360,8 +361,8 @@ private fun HomeFeed(
 private fun CompactSearchHeader(
     query: String,
     onQueryChanged: (String) -> Unit,
-    themeMode: ThemeMode,
-    onToggleTheme: () -> Unit,
+    selectedTheme: AppTheme,
+    onThemeSelected: (AppTheme) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -373,8 +374,8 @@ private fun CompactSearchHeader(
         InlineSearchBar(
             query = query,
             onQueryChanged = onQueryChanged,
-            actionText = themeMode.label,
-            onActionClick = onToggleTheme,
+            actionText = selectedTheme.shortLabel,
+            onActionClick = { onThemeSelected(selectedTheme.next()) },
             actionTestTag = MoviesTestTags.THEME,
         )
     }
@@ -383,8 +384,8 @@ private fun CompactSearchHeader(
 @Composable
 private fun Hero(
     movie: MovieListItem?,
-    themeMode: ThemeMode,
-    onToggleTheme: () -> Unit,
+    selectedTheme: AppTheme,
+    onThemeSelected: (AppTheme) -> Unit,
     searchQuery: String,
     onSearchQueryChanged: (String) -> Unit,
     onMovieClick: (Long, com.example.tmdb.domain.model.MediaType) -> Unit,
@@ -431,8 +432,8 @@ private fun Hero(
             InlineSearchBar(
                 query = searchQuery,
                 onQueryChanged = onSearchQueryChanged,
-                actionText = themeMode.label,
-                onActionClick = onToggleTheme,
+                actionText = selectedTheme.shortLabel,
+                onActionClick = { onThemeSelected(selectedTheme.next()) },
                 actionTestTag = MoviesTestTags.THEME,
             )
             Spacer(Modifier.weight(1f))
@@ -911,8 +912,8 @@ private fun WatchlistResultRow(
 
 private fun androidx.compose.foundation.lazy.LazyListScope.profileContent(
     items: List<WatchlistItemUi>,
-    themeMode: ThemeMode,
-    onToggleTheme: () -> Unit,
+    selectedTheme: AppTheme,
+    onThemeSelected: (AppTheme) -> Unit,
 ) {
     val savedCount = items.size
     val movieCount = items.count { it.movie.mediaType == com.example.tmdb.domain.model.MediaType.MOVIE }
@@ -942,7 +943,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.profileContent(
             ProfileMetricRow(label = "Movies / Series", value = "$movieCount / $seriesCount")
             ProfileMetricRow(label = "Watching / Completed", value = "$watchingCount / $completedCount")
             ProfileMetricRow(label = "Favorites", value = favoriteCount.toString())
-            ProfileMetricRow(label = "Average user rating", value = averageUserRating?.let { String.format("%.1f", it) } ?: "Not rated")
+            ProfileMetricRow(label = "Average user rating", value = averageUserRating?.let { String.format(java.util.Locale.US, "%.1f", it) } ?: "Not rated")
             if (favoriteGenres.isNotEmpty()) {
                 GlassSurface(contentPadding = PaddingValues(14.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -956,23 +957,19 @@ private fun androidx.compose.foundation.lazy.LazyListScope.profileContent(
                 }
             }
             GlassSurface(contentPadding = PaddingValues(14.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(text = "Theme", style = MaterialTheme.typography.titleMedium)
                         Text(
-                            text = when (themeMode) {
-                                ThemeMode.SYSTEM -> "Following system"
-                                ThemeMode.LIGHT -> "Light mode"
-                                ThemeMode.DARK -> "Dark mode"
-                            },
+                            text = "Pick a light or dark palette · ${selectedTheme.displayName}",
                             style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    TextButton(onClick = onToggleTheme) {
-                        Text("Change")
-                    }
+                    ThemePicker(
+                        selected = selectedTheme,
+                        onThemeSelected = onThemeSelected,
+                    )
                 }
             }
             if (recentNotes.isNotEmpty()) {
@@ -1382,13 +1379,6 @@ private data class BottomNavItem(
     val icon: ImageVector,
 )
 
-private val ThemeMode.label: String
-    get() = when (this) {
-        ThemeMode.SYSTEM -> "Auto"
-        ThemeMode.LIGHT -> "Light"
-        ThemeMode.DARK -> "Dark"
-    }
-
 @ThemePreviews
 @Composable
 private fun MoviesHomePreview() {
@@ -1406,8 +1396,8 @@ private fun MoviesHomePreview() {
                     ),
                 ),
             ),
-            themeMode = ThemeMode.SYSTEM,
-            onToggleTheme = {},
+            selectedTheme = AppTheme.SYSTEM,
+            onThemeSelected = {},
             searchResults = null,
             discoverResults = null,
             onSearchQueryChanged = {},

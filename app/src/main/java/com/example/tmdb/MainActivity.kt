@@ -13,16 +13,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.tmdb.core.designsystem.theme.AppTheme
 import com.example.tmdb.core.designsystem.theme.TMDBTheme
-import com.example.tmdb.core.designsystem.theme.ThemeMode
 import com.example.tmdb.core.navigation.MovieDetailRoute
+import kotlinx.coroutines.launch
 import com.example.tmdb.core.navigation.MoviesRoute
 import com.example.tmdb.core.navigation.PersonRoute
 import com.example.tmdb.domain.model.MediaType
@@ -37,10 +39,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            // App-level theme preference; survives rotation. (Persistence via DataStore is future work.)
-            var themeMode by rememberSaveable { mutableStateOf(ThemeMode.SYSTEM) }
+            // App-level theme preference, persisted across launches via DataStore.
+            val context = LocalContext.current
+            val themePreferences = remember { ThemePreferences(context) }
+            val scope = rememberCoroutineScope()
+            val appTheme by themePreferences.theme.collectAsStateWithLifecycle(initialValue = AppTheme.SYSTEM)
 
-            TMDBTheme(themeMode = themeMode) {
+            TMDBTheme(appTheme = appTheme) {
               // Themed background fills behind the transparent system bars (edge-to-edge).
               Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
                 val navController = rememberNavController()
@@ -62,8 +67,8 @@ class MainActivity : ComponentActivity() {
                             onMovieClick = { movieId, mediaType ->
                                 navController.navigate(MovieDetailRoute(movieId, mediaType.name))
                             },
-                            themeMode = themeMode,
-                            onToggleTheme = { themeMode = themeMode.next() },
+                            selectedTheme = appTheme,
+                            onThemeSelected = { theme -> scope.launch { themePreferences.setTheme(theme) } },
                         )
                     }
                     composable<MovieDetailRoute> {

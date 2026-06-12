@@ -25,8 +25,10 @@ konsist = "0.17.3"
 robolectric = "4.16.1"
 androidxTestCore = "1.7.0"
 kover = "0.9.8"
+datastore = "1.1.7"
 
 [libraries]
+androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }

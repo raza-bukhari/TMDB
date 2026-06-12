@@ -9,7 +9,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import com.example.tmdb.core.designsystem.component.StateTestTags
 import com.example.tmdb.core.designsystem.theme.TMDBTheme
-import com.example.tmdb.core.designsystem.theme.ThemeMode
+import com.example.tmdb.core.designsystem.theme.AppTheme
 import com.example.tmdb.domain.model.HomeList
 import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.model.WatchlistStatus
@@ -39,11 +39,11 @@ class MoviesScreenTest {
         onTabSelected: (MoviesTab) -> Unit = {},
         onWatchlistToggle: (MovieListItem) -> Unit = {},
     ) {
-        TMDBTheme(themeMode = ThemeMode.SYSTEM) {
+        TMDBTheme(appTheme = AppTheme.SYSTEM) {
             MoviesScreenContent(
                 state = state,
-                themeMode = ThemeMode.SYSTEM,
-                onToggleTheme = {},
+                selectedTheme = AppTheme.SYSTEM,
+                onThemeSelected = {},
                 searchResults = null,
                 discoverResults = null,
                 onSearchQueryChanged = onSearchQueryChanged,
