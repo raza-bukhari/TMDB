@@ -6,13 +6,14 @@ import com.example.tmdb.core.testing.MainDispatcherRule
 import com.example.tmdb.domain.model.AppError
 import com.example.tmdb.domain.model.AppException
 import com.example.tmdb.domain.model.HomeList
+import com.example.tmdb.domain.model.MediaKey
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieId
 import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.usecase.AddMovieToWatchlistUseCase
 import com.example.tmdb.domain.usecase.DiscoverMoviesUseCase
 import com.example.tmdb.domain.usecase.GetHomeListUseCase
-import com.example.tmdb.domain.usecase.ObserveWatchlistIdsUseCase
+import com.example.tmdb.domain.usecase.ObserveWatchlistKeysUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistItemsUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistUseCase
 import com.example.tmdb.domain.usecase.RemoveMovieFromWatchlistUseCase
@@ -36,7 +37,7 @@ class MoviesViewModelTest {
         discoverMovies = DiscoverMoviesUseCase(repository),
         observeWatchlist = ObserveWatchlistUseCase(repository),
         observeWatchlistItems = ObserveWatchlistItemsUseCase(repository),
-        observeWatchlistIds = ObserveWatchlistIdsUseCase(repository),
+        observeWatchlistKeys = ObserveWatchlistKeysUseCase(repository),
         addMovieToWatchlist = AddMovieToWatchlistUseCase(repository),
         removeMovieFromWatchlist = RemoveMovieFromWatchlistUseCase(repository),
     )
@@ -144,7 +145,7 @@ class MoviesViewModelTest {
         viewModel.uiState.test {
             viewModel.onWatchlistToggle(item)
 
-            val state = expectMostRecentItemAfter { MovieId(550) in it.watchlistIds }
+            val state = expectMostRecentItemAfter { MediaKey(MovieId(550), MediaType.MOVIE) in it.watchlistKeys }
             assertEquals(listOf(550L), state.watchlistMovies.map { it.id })
             cancelAndIgnoreRemainingEvents()
         }

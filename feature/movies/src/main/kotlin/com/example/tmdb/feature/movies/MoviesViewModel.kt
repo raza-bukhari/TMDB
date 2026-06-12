@@ -13,7 +13,7 @@ import com.example.tmdb.domain.model.asAppError
 import com.example.tmdb.domain.usecase.AddMovieToWatchlistUseCase
 import com.example.tmdb.domain.usecase.DiscoverMoviesUseCase
 import com.example.tmdb.domain.usecase.GetHomeListUseCase
-import com.example.tmdb.domain.usecase.ObserveWatchlistIdsUseCase
+import com.example.tmdb.domain.usecase.ObserveWatchlistKeysUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistItemsUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistUseCase
 import com.example.tmdb.domain.usecase.RemoveMovieFromWatchlistUseCase
@@ -50,7 +50,7 @@ internal class MoviesViewModel(
     private val discoverMovies: DiscoverMoviesUseCase,
     private val observeWatchlist: ObserveWatchlistUseCase,
     private val observeWatchlistItems: ObserveWatchlistItemsUseCase,
-    private val observeWatchlistIds: ObserveWatchlistIdsUseCase,
+    private val observeWatchlistKeys: ObserveWatchlistKeysUseCase,
     private val addMovieToWatchlist: AddMovieToWatchlistUseCase,
     private val removeMovieFromWatchlist: RemoveMovieFromWatchlistUseCase,
 ) : ViewModel() {
@@ -138,8 +138,8 @@ internal class MoviesViewModel(
     fun onWatchlistToggle(movie: MovieListItem) {
         viewModelScope.launch {
             val id = MovieId(movie.id)
-            if (id in _uiState.value.watchlistIds) {
-                removeMovieFromWatchlist(id)
+            if (movie.mediaKey in _uiState.value.watchlistKeys) {
+                removeMovieFromWatchlist(id, movie.mediaType)
             } else {
                 addMovieToWatchlist(movie.toDomainMovie())
             }
@@ -162,8 +162,8 @@ internal class MoviesViewModel(
             }
         }
         viewModelScope.launch {
-            observeWatchlistIds().collect { ids ->
-                _uiState.update { it.copy(watchlistIds = ids) }
+            observeWatchlistKeys().collect { keys ->
+                _uiState.update { it.copy(watchlistKeys = keys) }
             }
         }
     }

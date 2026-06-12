@@ -2,6 +2,7 @@ package com.example.tmdb.feature.movies
 
 import androidx.compose.runtime.Immutable
 import com.example.tmdb.domain.model.HomeList
+import com.example.tmdb.domain.model.MediaKey
 import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieId
@@ -24,7 +25,7 @@ data class MoviesUiState(
     val watchlistMovies: ImmutableList<MovieListItem> = persistentListOf(),
     val watchlistItems: ImmutableList<WatchlistItemUi> = persistentListOf(),
     val selectedWatchlistFilter: WatchlistFilter = WatchlistFilter.ALL,
-    val watchlistIds: Set<MovieId> = emptySet(),
+    val watchlistKeys: Set<MediaKey> = emptySet(),
     val discoverQuery: String = "",
     val discoverFilters: MovieFilters = MovieFilters(),
 )
@@ -73,6 +74,9 @@ data class MovieListItem(
     val genreIds: List<Int> = emptyList(),
     val mediaType: MediaType = MediaType.MOVIE,
 )
+
+internal val MovieListItem.mediaKey: MediaKey
+    get() = MediaKey(MovieId(id), mediaType)
 
 @Immutable
 data class WatchlistItemUi(

@@ -11,8 +11,8 @@ import com.example.tmdb.domain.usecase.GetTvEpisodeUseCase
 import com.example.tmdb.domain.usecase.GetTvSeasonUseCase
 import com.example.tmdb.domain.usecase.ObserveMovieDetailUseCase
 import com.example.tmdb.domain.usecase.ObserveMoviesUseCase
-import com.example.tmdb.domain.usecase.ObserveWatchlistIdsUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistItemsUseCase
+import com.example.tmdb.domain.usecase.ObserveWatchlistKeysUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistUseCase
 import com.example.tmdb.domain.usecase.RefreshMovieDetailUseCase
 import com.example.tmdb.domain.usecase.RemoveMovieFromWatchlistUseCase
@@ -36,7 +36,7 @@ val domainModule = module {
     factoryOf(::DiscoverMoviesUseCase)
     factoryOf(::ObserveWatchlistUseCase)
     factoryOf(::ObserveWatchlistItemsUseCase)
-    factoryOf(::ObserveWatchlistIdsUseCase)
+    factoryOf(::ObserveWatchlistKeysUseCase)
     factoryOf(::AddMovieToWatchlistUseCase)
     factoryOf(::RemoveMovieFromWatchlistUseCase)
     factoryOf(::UpdateUserActivityUseCase)

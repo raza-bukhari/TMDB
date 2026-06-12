@@ -10,6 +10,7 @@ enum class WatchlistStatus {
 
 data class UserMediaActivity(
     val mediaId: MovieId,
+    val mediaType: MediaType = MediaType.MOVIE,
     val status: WatchlistStatus = WatchlistStatus.PLAN_TO_WATCH,
     val favorite: Boolean = false,
     val userRating: Double? = null,

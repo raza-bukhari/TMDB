@@ -8,6 +8,7 @@ import com.example.tmdb.core.database.TmdbDatabase
 import com.example.tmdb.core.network.OmdbApi
 import com.example.tmdb.core.network.TmdbApi
 import com.example.tmdb.domain.model.HomeList
+import com.example.tmdb.domain.model.MediaKey
 import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.model.UserMediaActivity
 import com.example.tmdb.domain.model.WatchlistStatus
@@ -113,8 +114,8 @@ class OfflineFirstMovieRepositoryTest {
             assertEquals(listOf(MovieId(550)), awaitItem().map { it.id })
             cancelAndIgnoreRemainingEvents()
         }
-        repository.observeWatchlistIds().test {
-            assertEquals(setOf(MovieId(550)), awaitItem())
+        repository.observeWatchlistKeys().test {
+            assertEquals(setOf(MediaKey(MovieId(550), MediaType.MOVIE)), awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
     }

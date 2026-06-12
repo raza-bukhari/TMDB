@@ -10,6 +10,11 @@ enum class MediaType {
     TV,
 }
 
+data class MediaKey(
+    val id: MovieId,
+    val mediaType: MediaType,
+)
+
 data class Movie(
     val id: MovieId,
     val title: String,
@@ -22,4 +27,6 @@ data class Movie(
     val voteCount: Int,
     val genreIds: List<Int> = emptyList(),
     val mediaType: MediaType = MediaType.MOVIE,
-)
+) {
+    val mediaKey: MediaKey get() = MediaKey(id, mediaType)
+}

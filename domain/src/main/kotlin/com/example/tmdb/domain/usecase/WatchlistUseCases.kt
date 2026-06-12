@@ -3,6 +3,7 @@ package com.example.tmdb.domain.usecase
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
+import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.model.UserMediaActivity
 import com.example.tmdb.domain.repository.MovieRepository
 
@@ -18,10 +19,10 @@ class ObserveWatchlistItemsUseCase(
     operator fun invoke() = repository.observeWatchlistItems()
 }
 
-class ObserveWatchlistIdsUseCase(
+class ObserveWatchlistKeysUseCase(
     private val repository: MovieRepository,
 ) {
-    operator fun invoke() = repository.observeWatchlistIds()
+    operator fun invoke() = repository.observeWatchlistKeys()
 }
 
 class AddMovieToWatchlistUseCase(
@@ -35,7 +36,8 @@ class AddMovieToWatchlistUseCase(
 class RemoveMovieFromWatchlistUseCase(
     private val repository: MovieRepository,
 ) {
-    suspend operator fun invoke(id: MovieId) = repository.removeFromWatchlist(id)
+    suspend operator fun invoke(id: MovieId, mediaType: MediaType = MediaType.MOVIE) =
+        repository.removeFromWatchlist(id, mediaType)
 }
 
 class UpdateUserActivityUseCase(

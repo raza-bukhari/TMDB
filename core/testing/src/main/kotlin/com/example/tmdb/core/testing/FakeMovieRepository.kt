@@ -4,6 +4,7 @@ import androidx.paging.PagingData
 import com.example.tmdb.domain.model.DiscoverMovieFilters
 import com.example.tmdb.domain.model.ExternalRatings
 import com.example.tmdb.domain.model.HomeList
+import com.example.tmdb.domain.model.MediaKey
 import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.model.MediaVideo
 import com.example.tmdb.domain.model.Movie
@@ -69,20 +70,20 @@ class FakeMovieRepository : MovieRepository {
 
     val watchlistFlow = MutableStateFlow<List<Movie>>(emptyList())
     val watchlistItemsFlow = MutableStateFlow<List<WatchlistItem>>(emptyList())
-    val watchlistIdsFlow = MutableStateFlow<Set<MovieId>>(emptySet())
+    val watchlistKeysFlow = MutableStateFlow<Set<MediaKey>>(emptySet())
 
     override fun observeWatchlist(): Flow<List<Movie>> = watchlistFlow
 
     override fun observeWatchlistItems(): Flow<List<WatchlistItem>> = watchlistItemsFlow
 
-    override fun observeWatchlistIds(): Flow<Set<MovieId>> = watchlistIdsFlow
+    override fun observeWatchlistKeys(): Flow<Set<MediaKey>> = watchlistKeysFlow
 
     override suspend fun addToWatchlist(movie: Movie): Result<Unit> {
-        watchlistFlow.update { current -> listOf(movie) + current.filterNot { it.id == movie.id } }
+        watchlistFlow.update { current -> listOf(movie) + current.filterNot { it.mediaKey == movie.mediaKey } }
         watchlistItemsFlow.update { current ->
-            listOf(movie.toWatchlistItem()) + current.filterNot { it.movie.id == movie.id }
+            listOf(movie.toWatchlistItem()) + current.filterNot { it.movie.mediaKey == movie.mediaKey }
         }
-        watchlistIdsFlow.update { it + movie.id }
+        watchlistKeysFlow.update { it + movie.mediaKey }
         return Result.success(Unit)
     }
 
@@ -96,21 +97,23 @@ class FakeMovieRepository : MovieRepository {
             releaseDate = detail.releaseDate,
             voteAverage = detail.voteAverage,
             voteCount = detail.voteCount,
+            mediaType = detail.mediaType,
         )
         return addToWatchlist(movie)
     }
 
-    override suspend fun removeFromWatchlist(id: MovieId): Result<Unit> {
-        watchlistFlow.update { current -> current.filterNot { it.id == id } }
-        watchlistItemsFlow.update { current -> current.filterNot { it.movie.id == id } }
-        watchlistIdsFlow.update { it - id }
+    override suspend fun removeFromWatchlist(id: MovieId, mediaType: MediaType): Result<Unit> {
+        val key = MediaKey(id, mediaType)
+        watchlistFlow.update { current -> current.filterNot { it.mediaKey == key } }
+        watchlistItemsFlow.update { current -> current.filterNot { it.movie.mediaKey == key } }
+        watchlistKeysFlow.update { it - key }
         return Result.success(Unit)
     }
 
     override suspend fun updateUserActivity(activity: UserMediaActivity): Result<Unit> {
         watchlistItemsFlow.update { current ->
             current.map { item ->
-                if (item.movie.id == activity.mediaId) {
+                if (item.movie.mediaKey == MediaKey(activity.mediaId, activity.mediaType)) {
                     item.copy(
                         status = activity.status,
                         favorite = activity.favorite,

@@ -21,6 +21,7 @@ import com.example.tmdb.data.mapper.toWatchlistItem
 import com.example.tmdb.domain.model.DiscoverMovieFilters
 import com.example.tmdb.domain.model.ExternalRatings
 import com.example.tmdb.domain.model.HomeList
+import com.example.tmdb.domain.model.MediaKey
 import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.model.MediaVideo
 import com.example.tmdb.domain.model.Movie
@@ -113,9 +114,9 @@ internal class OfflineFirstMovieRepository(
             .map { movies -> movies.map { it.toWatchlistItem() } }
             .flowOn(dispatchers.default)
 
-    override fun observeWatchlistIds(): Flow<Set<MovieId>> =
-        watchlistDao.observeWatchlistIds()
-            .map { ids -> ids.map(::MovieId).toSet() }
+    override fun observeWatchlistKeys(): Flow<Set<MediaKey>> =
+        watchlistDao.observeWatchlist()
+            .map { movies -> movies.map { it.toDomain().mediaKey }.toSet() }
             .flowOn(dispatchers.default)
 
     override suspend fun addToWatchlist(movie: Movie): Result<Unit> =
@@ -128,9 +129,9 @@ internal class OfflineFirstMovieRepository(
             runCatching { watchlistDao.upsert(detail.toWatchlistEntity(System.currentTimeMillis())) }
         }
 
-    override suspend fun removeFromWatchlist(id: MovieId): Result<Unit> =
+    override suspend fun removeFromWatchlist(id: MovieId, mediaType: MediaType): Result<Unit> =
         withContext(dispatchers.io) {
-            runCatching { watchlistDao.delete(id.value) }
+            runCatching { watchlistDao.delete(id.value, mediaType.name) }
         }
 
     override suspend fun updateUserActivity(activity: UserMediaActivity): Result<Unit> =
@@ -138,6 +139,7 @@ internal class OfflineFirstMovieRepository(
             runCatching {
                 watchlistDao.updateActivity(
                     id = activity.mediaId.value,
+                    mediaType = activity.mediaType.name,
                     status = activity.status.name,
                     favorite = activity.favorite,
                     userRating = activity.userRating,

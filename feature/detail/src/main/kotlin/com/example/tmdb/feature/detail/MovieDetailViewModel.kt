@@ -7,6 +7,7 @@ import androidx.navigation.toRoute
 import com.example.tmdb.core.navigation.MovieDetailRoute
 import com.example.tmdb.domain.model.AppError
 import com.example.tmdb.domain.model.ExternalRatings
+import com.example.tmdb.domain.model.MediaKey
 import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.model.MovieDetail
 import com.example.tmdb.domain.model.MovieId
@@ -18,7 +19,7 @@ import com.example.tmdb.domain.usecase.GetExternalRatingsUseCase
 import com.example.tmdb.domain.usecase.GetMediaVideosUseCase
 import com.example.tmdb.domain.usecase.GetTvSeasonUseCase
 import com.example.tmdb.domain.usecase.ObserveMovieDetailUseCase
-import com.example.tmdb.domain.usecase.ObserveWatchlistIdsUseCase
+import com.example.tmdb.domain.usecase.ObserveWatchlistKeysUseCase
 import com.example.tmdb.domain.usecase.ObserveWatchlistItemsUseCase
 import com.example.tmdb.domain.usecase.RefreshMovieDetailUseCase
 import com.example.tmdb.domain.usecase.RemoveMovieFromWatchlistUseCase
@@ -42,7 +43,7 @@ internal class MovieDetailViewModel(
     private val getMediaVideos: GetMediaVideosUseCase,
     private val getTvSeason: GetTvSeasonUseCase,
     observeWatchlistItems: ObserveWatchlistItemsUseCase,
-    private val observeWatchlistIds: ObserveWatchlistIdsUseCase,
+    private val observeWatchlistKeys: ObserveWatchlistKeysUseCase,
     private val addMovieToWatchlist: AddMovieToWatchlistUseCase,
     private val removeMovieFromWatchlist: RemoveMovieFromWatchlistUseCase,
     private val updateUserActivity: UpdateUserActivityUseCase,
@@ -53,14 +54,14 @@ internal class MovieDetailViewModel(
         MediaType.valueOf(savedStateHandle.toRoute<MovieDetailRoute>().mediaType)
     }.getOrDefault(MediaType.MOVIE)
     private val detailFlow = observeMovieDetail(movieId, mediaType)
-    private val watchlistIds = observeWatchlistIds()
+    private val watchlistKeys = observeWatchlistKeys()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = emptySet(),
         )
     private val userActivity = observeWatchlistItems()
-        .map { items -> items.firstOrNull { it.movie.id == movieId }?.toActivityUi() }
+        .map { items -> items.firstOrNull { it.movie.mediaKey == MediaKey(movieId, mediaType) }?.toActivityUi() }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
@@ -76,13 +77,13 @@ internal class MovieDetailViewModel(
     private var loadedSeasonNumber: Int? = null
 
     private val detailState =
-        combine(detailFlow, isRefreshing, refreshError, externalRatings, watchlistIds) { detail, refreshing, error, ratings, savedIds ->
+        combine(detailFlow, isRefreshing, refreshError, externalRatings, watchlistKeys) { detail, refreshing, error, ratings, savedKeys ->
             DetailState(
                 detail = detail,
                 refreshing = refreshing,
                 error = error,
                 ratings = ratings,
-                savedIds = savedIds,
+                savedKeys = savedKeys,
             )
         }
 
@@ -96,7 +97,7 @@ internal class MovieDetailViewModel(
                     detail != null -> MovieDetailContent.Detail(
                         detail.toUi(
                             externalRatings = detailState.ratings,
-                            isWatchlisted = detail.id in detailState.savedIds,
+                            isWatchlisted = detail.mediaKey in detailState.savedKeys,
                         ).copy(
                             trailerUrl = trailer,
                             episodes = episodes.toImmutableList(),
@@ -127,8 +128,8 @@ internal class MovieDetailViewModel(
     fun onWatchlistToggle() {
         viewModelScope.launch {
             val detail = latestDetail ?: return@launch
-            if (detail.id in watchlistIds.value) {
-                removeMovieFromWatchlist(detail.id)
+            if (detail.mediaKey in watchlistKeys.value) {
+                removeMovieFromWatchlist(detail.id, detail.mediaType)
             } else {
                 addMovieToWatchlist(detail)
             }
@@ -204,13 +205,14 @@ internal class MovieDetailViewModel(
     private fun updateActivity(transform: (UserActivityUi) -> UserActivityUi) {
         viewModelScope.launch {
             val detail = latestDetail ?: return@launch
-            if (detail.id !in watchlistIds.value) {
+            if (detail.mediaKey !in watchlistKeys.value) {
                 addMovieToWatchlist(detail)
             }
             val next = transform(userActivity.value ?: UserActivityUi())
             updateUserActivity(
                 UserMediaActivity(
                     mediaId = detail.id,
+                    mediaType = detail.mediaType,
                     status = next.status,
                     favorite = next.favorite,
                     userRating = next.userRating,
@@ -225,6 +227,9 @@ internal class MovieDetailViewModel(
         val refreshing: Boolean,
         val error: AppError?,
         val ratings: ExternalRatings,
-        val savedIds: Set<MovieId>,
+        val savedKeys: Set<MediaKey>,
     )
 }
+
+private val MovieDetail.mediaKey: MediaKey
+    get() = MediaKey(id, mediaType)

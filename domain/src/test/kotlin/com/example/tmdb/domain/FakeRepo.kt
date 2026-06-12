@@ -4,6 +4,7 @@ import androidx.paging.PagingData
 import com.example.tmdb.domain.model.DiscoverMovieFilters
 import com.example.tmdb.domain.model.ExternalRatings
 import com.example.tmdb.domain.model.HomeList
+import com.example.tmdb.domain.model.MediaKey
 import com.example.tmdb.domain.model.MediaType
 import com.example.tmdb.domain.model.MediaVideo
 import com.example.tmdb.domain.model.Movie
@@ -111,12 +112,12 @@ class FakeRepo : MovieRepository {
 
     override fun observeWatchlistItems(): Flow<List<WatchlistItem>> = watchlistItems
 
-    override fun observeWatchlistIds(): Flow<Set<MovieId>> =
-        watchlist.map { movies -> movies.map { it.id }.toSet() }
+    override fun observeWatchlistKeys(): Flow<Set<MediaKey>> =
+        watchlist.map { movies -> movies.map { it.mediaKey }.toSet() }
 
     override suspend fun addToWatchlist(movie: Movie): Result<Unit> {
-        watchlist.value = (listOf(movie) + watchlist.value.filterNot { it.id == movie.id })
-        watchlistItems.value = listOf(movie.toWatchlistItem()) + watchlistItems.value.filterNot { it.movie.id == movie.id }
+        watchlist.value = (listOf(movie) + watchlist.value.filterNot { it.mediaKey == movie.mediaKey })
+        watchlistItems.value = listOf(movie.toWatchlistItem()) + watchlistItems.value.filterNot { it.movie.mediaKey == movie.mediaKey }
         return Result.success(Unit)
     }
 
@@ -131,19 +132,21 @@ class FakeRepo : MovieRepository {
                 releaseDate = detail.releaseDate,
                 voteAverage = detail.voteAverage,
                 voteCount = detail.voteCount,
+                mediaType = detail.mediaType,
             ),
         )
     }
 
-    override suspend fun removeFromWatchlist(id: MovieId): Result<Unit> {
-        watchlist.value = watchlist.value.filterNot { it.id == id }
-        watchlistItems.value = watchlistItems.value.filterNot { it.movie.id == id }
+    override suspend fun removeFromWatchlist(id: MovieId, mediaType: MediaType): Result<Unit> {
+        val key = MediaKey(id, mediaType)
+        watchlist.value = watchlist.value.filterNot { it.mediaKey == key }
+        watchlistItems.value = watchlistItems.value.filterNot { it.movie.mediaKey == key }
         return Result.success(Unit)
     }
 
     override suspend fun updateUserActivity(activity: UserMediaActivity): Result<Unit> {
         watchlistItems.value = watchlistItems.value.map { item ->
-            if (item.movie.id == activity.mediaId) {
+            if (item.movie.mediaKey == MediaKey(activity.mediaId, activity.mediaType)) {
                 item.copy(
                     status = activity.status,
                     favorite = activity.favorite,

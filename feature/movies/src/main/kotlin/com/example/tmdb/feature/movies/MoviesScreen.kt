@@ -71,7 +71,7 @@ import com.example.tmdb.core.designsystem.component.PosterCard
 import com.example.tmdb.core.designsystem.component.RatingBadge
 import com.example.tmdb.core.designsystem.theme.TMDBTheme
 import com.example.tmdb.core.designsystem.theme.ThemeMode
-import com.example.tmdb.domain.model.MovieId
+import com.example.tmdb.domain.model.MediaKey
 import kotlinx.collections.immutable.persistentListOf
 import org.koin.androidx.compose.koinViewModel
 
@@ -241,7 +241,7 @@ private fun HomeFeed(
             searchResults?.let {
                 searchResultsContent(
                     searchResults = it,
-                    watchlistIds = state.watchlistIds,
+                    watchlistKeys = state.watchlistKeys,
                     onMovieClick = onMovieClick,
                     onWatchlistToggle = onWatchlistToggle,
                 )
@@ -282,7 +282,7 @@ private fun HomeFeed(
                         MovieSection(
                             section = section,
                             trendingWindow = state.trendingWindow,
-                            watchlistIds = state.watchlistIds,
+                            watchlistKeys = state.watchlistKeys,
                             onTrendingWindowSelected = onTrendingWindowSelected,
                             onMovieClick = onMovieClick,
                             onWatchlistToggle = onWatchlistToggle,
@@ -294,7 +294,7 @@ private fun HomeFeed(
                         items = state.watchlistItems.filter {
                             it.status == com.example.tmdb.domain.model.WatchlistStatus.WATCHING
                         }.map { it.movie },
-                        watchlistIds = state.watchlistIds,
+                        watchlistKeys = state.watchlistKeys,
                         onMovieClick = onMovieClick,
                         onWatchlistToggle = onWatchlistToggle,
                     )
@@ -302,7 +302,7 @@ private fun HomeFeed(
                         title = "Because you saved",
                         subtitle = "Your local queue, ready to resume",
                         items = state.watchlistItems.take(10).map { it.movie },
-                        watchlistIds = state.watchlistIds,
+                        watchlistKeys = state.watchlistKeys,
                         onMovieClick = onMovieClick,
                         onWatchlistToggle = onWatchlistToggle,
                     )
@@ -310,7 +310,7 @@ private fun HomeFeed(
                         title = "More like your favorites",
                         subtitle = "Favorites from your local profile",
                         items = state.watchlistItems.filter { it.favorite }.map { it.movie },
-                        watchlistIds = state.watchlistIds,
+                        watchlistKeys = state.watchlistKeys,
                         onMovieClick = onMovieClick,
                         onWatchlistToggle = onWatchlistToggle,
                     )
@@ -319,7 +319,7 @@ private fun HomeFeed(
                     discoverResults = discoverResults,
                     query = state.discoverQuery,
                     filters = state.discoverFilters,
-                    watchlistIds = state.watchlistIds,
+                    watchlistKeys = state.watchlistKeys,
                     onQueryChanged = onDiscoverQueryChanged,
                     onFiltersChanged = onDiscoverFiltersChanged,
                     onFiltersReset = onDiscoverFiltersReset,
@@ -329,7 +329,7 @@ private fun HomeFeed(
                 MoviesTab.WATCHLIST -> watchlistContent(
                     items = state.watchlistItems,
                     selectedFilter = state.selectedWatchlistFilter,
-                    watchlistIds = state.watchlistIds,
+                    watchlistKeys = state.watchlistKeys,
                     onFilterSelected = onWatchlistFilterSelected,
                     onMovieClick = onMovieClick,
                     onWatchlistToggle = onWatchlistToggle,
@@ -550,7 +550,7 @@ private fun FeaturedMovie(movie: MovieListItem, onMovieClick: (Long, com.example
 
 private fun androidx.compose.foundation.lazy.LazyListScope.searchResultsContent(
     searchResults: LazyPagingItems<MovieListItem>,
-    watchlistIds: Set<MovieId>,
+    watchlistKeys: Set<MediaKey>,
     onMovieClick: (Long, com.example.tmdb.domain.model.MediaType) -> Unit,
     onWatchlistToggle: (MovieListItem) -> Unit,
 ) {
@@ -588,7 +588,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.searchResultsContent(
                 searchResults[index]?.let { movie ->
                     SearchResultRow(
                         movie = movie,
-                        isWatchlisted = MovieId(movie.id) in watchlistIds,
+                        isWatchlisted = movie.mediaKey in watchlistKeys,
                         onMovieClick = onMovieClick,
                         onWatchlistToggle = onWatchlistToggle,
                     )
@@ -614,7 +614,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.discoverContent(
     discoverResults: LazyPagingItems<MovieListItem>?,
     query: String,
     filters: MovieFilters,
-    watchlistIds: Set<MovieId>,
+    watchlistKeys: Set<MediaKey>,
     onQueryChanged: (String) -> Unit,
     onFiltersChanged: (MovieFilters) -> Unit,
     onFiltersReset: () -> Unit,
@@ -667,7 +667,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.discoverContent(
                 DiscoverMovieGridRow(
                     rowIndex = rowIndex,
                     discoverResults = discoverResults,
-                    watchlistIds = watchlistIds,
+                    watchlistKeys = watchlistKeys,
                     onMovieClick = onMovieClick,
                     onWatchlistToggle = onWatchlistToggle,
                 )
@@ -756,7 +756,7 @@ private fun DiscoverHeader(
 private fun DiscoverMovieGridRow(
     rowIndex: Int,
     discoverResults: LazyPagingItems<MovieListItem>,
-    watchlistIds: Set<MovieId>,
+    watchlistKeys: Set<MediaKey>,
     onMovieClick: (Long, com.example.tmdb.domain.model.MediaType) -> Unit,
     onWatchlistToggle: (MovieListItem) -> Unit,
 ) {
@@ -774,7 +774,7 @@ private fun DiscoverMovieGridRow(
             if (movie != null) {
                 HomeMovieCard(
                     movie = movie,
-                    isWatchlisted = MovieId(movie.id) in watchlistIds,
+                    isWatchlisted = movie.mediaKey in watchlistKeys,
                     onMovieClick = onMovieClick,
                     onWatchlistToggle = onWatchlistToggle,
                     modifier = Modifier.weight(1f),
@@ -789,7 +789,7 @@ private fun DiscoverMovieGridRow(
 private fun androidx.compose.foundation.lazy.LazyListScope.watchlistContent(
     items: List<WatchlistItemUi>,
     selectedFilter: WatchlistFilter,
-    watchlistIds: Set<MovieId>,
+    watchlistKeys: Set<MediaKey>,
     onFilterSelected: (WatchlistFilter) -> Unit,
     onMovieClick: (Long, com.example.tmdb.domain.model.MediaType) -> Unit,
     onWatchlistToggle: (MovieListItem) -> Unit,
@@ -849,7 +849,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.watchlistContent(
     ) { item ->
         WatchlistResultRow(
             item = item,
-            isWatchlisted = MovieId(item.movie.id) in watchlistIds,
+            isWatchlisted = item.movie.mediaKey in watchlistKeys,
             onMovieClick = onMovieClick,
             onWatchlistToggle = onWatchlistToggle,
         )
@@ -1085,7 +1085,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.personalizedSection(
     title: String,
     subtitle: String,
     items: List<MovieListItem>,
-    watchlistIds: Set<MovieId>,
+    watchlistKeys: Set<MediaKey>,
     onMovieClick: (Long, com.example.tmdb.domain.model.MediaType) -> Unit,
     onWatchlistToggle: (MovieListItem) -> Unit,
 ) {
@@ -1120,7 +1120,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.personalizedSection(
                 items(items, key = { "${it.mediaType}:${it.id}" }) { movie ->
                     HomeMovieCard(
                         movie = movie,
-                        isWatchlisted = MovieId(movie.id) in watchlistIds,
+                        isWatchlisted = movie.mediaKey in watchlistKeys,
                         onMovieClick = onMovieClick,
                         onWatchlistToggle = onWatchlistToggle,
                     )
@@ -1134,7 +1134,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.personalizedSection(
 private fun MovieSection(
     section: HomeSectionUi,
     trendingWindow: TrendingWindow,
-    watchlistIds: Set<MovieId>,
+    watchlistKeys: Set<MediaKey>,
     onTrendingWindowSelected: (TrendingWindow) -> Unit,
     onMovieClick: (Long, com.example.tmdb.domain.model.MediaType) -> Unit,
     onWatchlistToggle: (MovieListItem) -> Unit,
@@ -1174,7 +1174,7 @@ private fun MovieSection(
             items(section.movies, key = { it.id }) { movie ->
                 HomeMovieCard(
                     movie = movie,
-                    isWatchlisted = MovieId(movie.id) in watchlistIds,
+                    isWatchlisted = movie.mediaKey in watchlistKeys,
                     onMovieClick = onMovieClick,
                     onWatchlistToggle = onWatchlistToggle,
                 )

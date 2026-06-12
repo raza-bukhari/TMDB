@@ -1,11 +1,11 @@
 package com.example.tmdb.core.database
 
 import androidx.room.Entity
-import androidx.room.PrimaryKey
 
-@Entity(tableName = "watchlist_movies")
+@Entity(tableName = "watchlist_movies", primaryKeys = ["id", "mediaType"])
 data class WatchlistMovieEntity(
-    @PrimaryKey val id: Long,
+    val id: Long,
+    val mediaType: String = "MOVIE",
     val title: String,
     val overview: String,
     val posterPath: String?,
@@ -14,7 +14,6 @@ data class WatchlistMovieEntity(
     val voteAverage: Double,
     val voteCount: Int,
     val addedAtMillis: Long,
-    val mediaType: String = "MOVIE",
     val status: String = "PLAN_TO_WATCH",
     val favorite: Boolean = false,
     val userRating: Double? = null,

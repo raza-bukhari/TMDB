@@ -12,9 +12,6 @@ interface WatchlistDao {
     @Query("SELECT * FROM watchlist_movies ORDER BY addedAtMillis DESC")
     fun observeWatchlist(): Flow<List<WatchlistMovieEntity>>
 
-    @Query("SELECT id FROM watchlist_movies")
-    fun observeWatchlistIds(): Flow<List<Long>>
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(movie: WatchlistMovieEntity)
 
@@ -26,11 +23,12 @@ interface WatchlistDao {
             userRating = :userRating,
             watchedDate = :watchedDate,
             notes = :notes
-        WHERE id = :id
+        WHERE id = :id AND mediaType = :mediaType
         """,
     )
     suspend fun updateActivity(
         id: Long,
+        mediaType: String,
         status: String,
         favorite: Boolean,
         userRating: Double?,
@@ -38,6 +36,6 @@ interface WatchlistDao {
         notes: String,
     )
 
-    @Query("DELETE FROM watchlist_movies WHERE id = :id")
-    suspend fun delete(id: Long)
+    @Query("DELETE FROM watchlist_movies WHERE id = :id AND mediaType = :mediaType")
+    suspend fun delete(id: Long, mediaType: String)
 }

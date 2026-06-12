@@ -5,6 +5,7 @@ import com.example.tmdb.domain.model.DiscoverMovieFilters
 import com.example.tmdb.domain.model.ExternalRatings
 import com.example.tmdb.domain.model.HomeList
 import com.example.tmdb.domain.model.MediaType
+import com.example.tmdb.domain.model.MediaKey
 import com.example.tmdb.domain.model.MediaVideo
 import com.example.tmdb.domain.model.Movie
 import com.example.tmdb.domain.model.MovieCategory
@@ -44,13 +45,13 @@ interface MovieRepository {
 
     fun observeWatchlistItems(): Flow<List<WatchlistItem>>
 
-    fun observeWatchlistIds(): Flow<Set<MovieId>>
+    fun observeWatchlistKeys(): Flow<Set<MediaKey>>
 
     suspend fun addToWatchlist(movie: Movie): Result<Unit>
 
     suspend fun addToWatchlist(detail: MovieDetail): Result<Unit>
 
-    suspend fun removeFromWatchlist(id: MovieId): Result<Unit>
+    suspend fun removeFromWatchlist(id: MovieId, mediaType: MediaType = MediaType.MOVIE): Result<Unit>
 
     suspend fun updateUserActivity(activity: UserMediaActivity): Result<Unit>
 
