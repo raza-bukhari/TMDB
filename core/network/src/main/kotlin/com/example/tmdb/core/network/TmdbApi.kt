@@ -94,6 +94,12 @@ interface TmdbApi {
         @Query("primary_release_date.gte") releaseDateGte: String? = null,
         @Query("primary_release_date.lte") releaseDateLte: String? = null,
         @Query("with_genres") withGenres: String? = null,
+        @Query("with_original_language") withOriginalLanguage: String? = null,
+        @Query("with_runtime.gte") runtimeGte: Int? = null,
+        @Query("with_runtime.lte") runtimeLte: Int? = null,
+        @Query("with_watch_providers") watchProviderId: Int? = null,
+        @Query("watch_region") watchRegion: String? = null,
+        @Query("with_watch_monetization_types") watchMonetizationTypes: String? = null,
         @Query("include_adult") includeAdult: Boolean = false,
         @Query("include_video") includeVideo: Boolean = false,
     ): PagedResponseDto<MovieDto>
@@ -106,6 +112,12 @@ interface TmdbApi {
         @Query("first_air_date.gte") firstAirDateGte: String? = null,
         @Query("first_air_date.lte") firstAirDateLte: String? = null,
         @Query("with_genres") withGenres: String? = null,
+        @Query("with_original_language") withOriginalLanguage: String? = null,
+        @Query("with_runtime.gte") runtimeGte: Int? = null,
+        @Query("with_runtime.lte") runtimeLte: Int? = null,
+        @Query("with_watch_providers") watchProviderId: Int? = null,
+        @Query("watch_region") watchRegion: String? = null,
+        @Query("with_watch_monetization_types") watchMonetizationTypes: String? = null,
         @Query("include_adult") includeAdult: Boolean = false,
     ): PagedResponseDto<MovieDto>
 }

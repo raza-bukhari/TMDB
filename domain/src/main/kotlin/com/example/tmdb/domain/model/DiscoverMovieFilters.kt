@@ -7,6 +7,12 @@ data class DiscoverMovieFilters(
     val toYear: Int? = null,
     val genres: Set<MovieGenre> = emptySet(),
     val mediaType: MediaType = MediaType.MOVIE,
+    val language: String? = null,
+    val runtimeGte: Int? = null,
+    val runtimeLte: Int? = null,
+    val watchProviderId: Int? = null,
+    val watchRegion: String = "US",
+    val watchMonetizationTypes: String? = null,
 )
 
 enum class DiscoverMovieSort(val apiValue: String) {

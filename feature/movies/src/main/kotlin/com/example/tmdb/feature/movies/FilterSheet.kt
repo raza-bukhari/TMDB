@@ -140,6 +140,66 @@ internal fun FilterSheet(
                     }
                 }
             }
+
+            Section("Language") {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LanguageFilter.entries.forEach { language ->
+                        FilterChip(
+                            selected = filters.language == language,
+                            onClick = { onFiltersChanged(filters.copy(language = language)) },
+                            label = { Text(language.label) },
+                        )
+                    }
+                }
+            }
+
+            Section("Runtime") {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    RuntimeFilter.entries.forEach { runtime ->
+                        FilterChip(
+                            selected = filters.runtime == runtime,
+                            onClick = { onFiltersChanged(filters.copy(runtime = runtime)) },
+                            label = { Text(runtime.label) },
+                        )
+                    }
+                }
+            }
+
+            Section("Streaming provider") {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    WatchProviderFilter.entries.forEach { provider ->
+                        FilterChip(
+                            selected = filters.watchProvider == provider,
+                            onClick = { onFiltersChanged(filters.copy(watchProvider = provider)) },
+                            label = { Text(provider.label) },
+                        )
+                    }
+                }
+            }
+
+            Section("Region") {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("US", "GB", "CA", "PK").forEach { region ->
+                        FilterChip(
+                            selected = filters.region == region,
+                            onClick = { onFiltersChanged(filters.copy(region = region)) },
+                            label = { Text(region) },
+                        )
+                    }
+                }
+            }
+
+            Section("Availability") {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    AvailabilityFilter.entries.forEach { availability ->
+                        FilterChip(
+                            selected = filters.availability == availability,
+                            onClick = { onFiltersChanged(filters.copy(availability = availability)) },
+                            label = { Text(availability.label) },
+                        )
+                    }
+                }
+            }
         }
     }
 }

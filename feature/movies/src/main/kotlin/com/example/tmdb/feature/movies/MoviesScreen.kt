@@ -702,6 +702,18 @@ private fun DiscoverHeader(
             placeholder = "Search movies",
             clearContentDescription = "Clear Discover search",
         )
+        val activeLabels = filters.activeLabels()
+        if (activeLabels.isNotEmpty()) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(activeLabels, key = { it }) { label ->
+                    FilterChipPill(
+                        text = label,
+                        selected = true,
+                        onClick = { showFilters = true },
+                    )
+                }
+            }
+        }
     }
 
     if (showFilters) {

@@ -29,6 +29,12 @@ internal class DiscoverPagingSource(
                         withGenres = filters.genres
                             .takeIf { it.isNotEmpty() }
                             ?.joinToString(separator = "|") { it.id.toString() },
+                        withOriginalLanguage = filters.language,
+                        runtimeGte = filters.runtimeGte,
+                        runtimeLte = filters.runtimeLte,
+                        watchProviderId = filters.watchProviderId,
+                        watchRegion = filters.watchProviderId?.let { filters.watchRegion },
+                        watchMonetizationTypes = filters.watchMonetizationTypes,
                     )
                     MediaType.TV -> api.discoverTv(
                         page = page,
@@ -39,6 +45,12 @@ internal class DiscoverPagingSource(
                         withGenres = filters.genres
                             .takeIf { it.isNotEmpty() }
                             ?.joinToString(separator = "|") { it.id.toString() },
+                        withOriginalLanguage = filters.language,
+                        runtimeGte = filters.runtimeGte,
+                        runtimeLte = filters.runtimeLte,
+                        watchProviderId = filters.watchProviderId,
+                        watchRegion = filters.watchProviderId?.let { filters.watchRegion },
+                        watchMonetizationTypes = filters.watchMonetizationTypes,
                     )
                 }
             }.getOrThrow()
