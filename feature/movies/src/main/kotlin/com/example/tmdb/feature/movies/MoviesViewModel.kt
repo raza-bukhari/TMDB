@@ -138,8 +138,22 @@ internal class MoviesViewModel(
         _uiState.update { it.copy(discoverFilters = MovieFilters()) }
     }
 
+    // Tab history for system-back: Home is the root, so navigating to it clears the stack;
+    // every other forward move records the tab being left so back can return to it.
+    private val tabBackStack = ArrayDeque<MoviesTab>()
+
     fun onTabSelected(tab: MoviesTab) {
+        val current = _uiState.value.selectedTab
+        if (tab == current) return
+        if (tab == MoviesTab.HOME) tabBackStack.clear() else tabBackStack.addLast(current)
         _uiState.update { it.copy(selectedTab = tab, searchQuery = "") }
+    }
+
+    /** Pops the tab history on system back; returns false when there is nothing to pop. */
+    fun onTabBack(): Boolean {
+        val previous = tabBackStack.removeLastOrNull() ?: return false
+        _uiState.update { it.copy(selectedTab = previous, searchQuery = "") }
+        return true
     }
 
     fun onWatchlistFilterSelected(filter: WatchlistFilter) {

@@ -51,6 +51,7 @@ class MoviesScreenTest {
                 onDiscoverFiltersChanged = {},
                 onDiscoverFiltersReset = {},
                 onTabSelected = onTabSelected,
+                onTabBack = { false },
                 onWatchlistFilterSelected = {},
                 onWatchlistSortSelected = {},
                 onWatchlistToggle = onWatchlistToggle,

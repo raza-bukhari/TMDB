@@ -1,5 +1,16 @@
 package com.example.tmdb.feature.movies
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -20,7 +31,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
@@ -28,6 +41,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
@@ -48,11 +62,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -71,14 +87,17 @@ import com.example.tmdb.core.designsystem.ThemePreviews
 import com.example.tmdb.core.designsystem.component.ErrorState
 import com.example.tmdb.core.designsystem.component.FilterChipPill
 import com.example.tmdb.core.designsystem.component.GlassSurface
+import com.example.tmdb.core.designsystem.component.GradientPrimaryButton
 import com.example.tmdb.core.designsystem.component.PosterCard
 import com.example.tmdb.core.designsystem.component.RatingBadge
 import com.example.tmdb.core.designsystem.component.ThemePicker
 import com.example.tmdb.core.designsystem.theme.TMDBTheme
 import com.example.tmdb.core.designsystem.theme.AppTheme
 import com.example.tmdb.domain.model.MediaKey
+import com.example.tmdb.domain.model.MovieGenre
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
 object MoviesTestTags {
@@ -96,6 +115,7 @@ object MoviesTestTags {
     const val WATCHLIST = "movies_watchlist"
     const val PROFILE = "movies_profile"
     const val WATCHLIST_TOGGLE = "movies_watchlist_toggle"
+    fun profileStat(label: String) = "movies_profile_stat_$label"
     const val TRENDING_TODAY = "movies_trending_today"
     const val TRENDING_WEEK = "movies_trending_week"
     const val REFRESHING = "movies_refreshing"
@@ -133,6 +153,7 @@ fun MoviesScreen(
         onDiscoverFiltersChanged = viewModel::onDiscoverFiltersChanged,
         onDiscoverFiltersReset = viewModel::onDiscoverFiltersReset,
         onTabSelected = viewModel::onTabSelected,
+        onTabBack = viewModel::onTabBack,
         onWatchlistFilterSelected = viewModel::onWatchlistFilterSelected,
         onWatchlistSortSelected = viewModel::onWatchlistSortSelected,
         onWatchlistToggle = viewModel::onWatchlistToggle,
@@ -157,6 +178,7 @@ internal fun MoviesScreenContent(
     onDiscoverFiltersChanged: (MovieFilters) -> Unit,
     onDiscoverFiltersReset: () -> Unit,
     onTabSelected: (MoviesTab) -> Unit,
+    onTabBack: () -> Boolean,
     onWatchlistFilterSelected: (WatchlistFilter) -> Unit,
     onWatchlistSortSelected: (WatchlistSort) -> Unit,
     onWatchlistToggle: (MovieListItem) -> Unit,
@@ -166,6 +188,18 @@ internal fun MoviesScreenContent(
     onMovieClick: (Long, com.example.tmdb.domain.model.MediaType) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isSearching = state.searchQuery.isNotBlank()
+    // One scroll state per tab so switching tabs restores each tab's own position.
+    val tabListStates = remember { MoviesTab.entries.associateWith { LazyListState() } }
+    val scope = rememberCoroutineScope()
+
+    // System back: clear an active search, else pop the tab history (handled by the
+    // ViewModel so it survives recomposition/rotation), else exit from Home.
+    BackHandler(enabled = isSearching) { onSearchQueryChanged("") }
+    BackHandler(enabled = !isSearching && state.selectedTab != MoviesTab.HOME) {
+        if (!onTabBack()) onTabSelected(MoviesTab.HOME)
+    }
+
     Surface(modifier = modifier.fillMaxSize()) {
         Box(modifier = Modifier.fillMaxSize()) {
             when {
@@ -181,6 +215,7 @@ internal fun MoviesScreenContent(
                     ) {
                         HomeFeed(
                             state = state,
+                            tabListStates = tabListStates,
                             selectedTheme = selectedTheme,
                             onThemeSelected = onThemeSelected,
                             searchResults = searchResults,
@@ -189,7 +224,7 @@ internal fun MoviesScreenContent(
                             onDiscoverQueryChanged = onDiscoverQueryChanged,
                             onDiscoverFiltersChanged = onDiscoverFiltersChanged,
                             onDiscoverFiltersReset = onDiscoverFiltersReset,
-                            onTabSelected = onTabSelected,
+                            onNavigateToTab = onTabSelected,
                             onWatchlistFilterSelected = onWatchlistFilterSelected,
                             onWatchlistSortSelected = onWatchlistSortSelected,
                             onWatchlistToggle = onWatchlistToggle,
@@ -201,7 +236,14 @@ internal fun MoviesScreenContent(
             }
             TmdbBottomNav(
                 selectedTab = state.selectedTab,
-                onTabSelected = onTabSelected,
+                onTabSelected = { tab ->
+                    if (tab == state.selectedTab) {
+                        // Re-tapping the active tab scrolls its list back to the top.
+                        scope.launch { tabListStates.getValue(tab).animateScrollToItem(0) }
+                    } else {
+                        onTabSelected(tab)
+                    }
+                },
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
@@ -218,6 +260,7 @@ private fun LoadingHome() {
 @Composable
 private fun HomeFeed(
     state: MoviesUiState,
+    tabListStates: Map<MoviesTab, LazyListState>,
     selectedTheme: AppTheme,
     onThemeSelected: (AppTheme) -> Unit,
     searchResults: LazyPagingItems<MovieListItem>?,
@@ -226,7 +269,7 @@ private fun HomeFeed(
     onDiscoverQueryChanged: (String) -> Unit,
     onDiscoverFiltersChanged: (MovieFilters) -> Unit,
     onDiscoverFiltersReset: () -> Unit,
-    onTabSelected: (MoviesTab) -> Unit,
+    onNavigateToTab: (MoviesTab) -> Unit,
     onWatchlistFilterSelected: (WatchlistFilter) -> Unit,
     onWatchlistSortSelected: (WatchlistSort) -> Unit,
     onWatchlistToggle: (MovieListItem) -> Unit,
@@ -234,13 +277,13 @@ private fun HomeFeed(
     onMovieClick: (Long, com.example.tmdb.domain.model.MediaType) -> Unit,
 ) {
     val isSearching = state.searchQuery.isNotBlank()
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .testTag(MoviesTestTags.HOME),
-        verticalArrangement = Arrangement.spacedBy(if (isSearching) 8.dp else 24.dp),
-    ) {
-        if (isSearching) {
+    if (isSearching) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .testTag(MoviesTestTags.HOME),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             item {
                 CompactSearchHeader(
                     query = state.searchQuery,
@@ -257,8 +300,30 @@ private fun HomeFeed(
                     onWatchlistToggle = onWatchlistToggle,
                 )
             }
-        } else {
-            when (state.selectedTab) {
+            bottomNavSpacer()
+        }
+        return
+    }
+
+    // Direction-aware slide+fade between tabs; each tab keeps its own scroll state.
+    AnimatedContent(
+        targetState = state.selectedTab,
+        transitionSpec = {
+            val forward = targetState.ordinal > initialState.ordinal
+            (slideInHorizontally(tween(TAB_ANIM_MS)) { width -> if (forward) width / 6 else -width / 6 } +
+                fadeIn(tween(TAB_ANIM_MS)))
+                .togetherWith(fadeOut(tween(TAB_ANIM_MS / 2)))
+        },
+        label = "tabTransition",
+    ) { tab ->
+        LazyColumn(
+            state = tabListStates.getValue(tab),
+            modifier = Modifier
+                .fillMaxSize()
+                .testTag(MoviesTestTags.HOME),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+        ) {
+            when (tab) {
                 MoviesTab.HOME -> {
                     item {
                         Hero(
@@ -348,19 +413,35 @@ private fun HomeFeed(
                     onSortSelected = onWatchlistSortSelected,
                     onMovieClick = onMovieClick,
                     onWatchlistToggle = onWatchlistToggle,
+                    onBrowseDiscoverClick = { onNavigateToTab(MoviesTab.DISCOVER) },
                 )
                 MoviesTab.PROFILE -> profileContent(
                     items = state.watchlistItems,
                     selectedTheme = selectedTheme,
                     onThemeSelected = onThemeSelected,
+                    onMetricClick = { filter ->
+                        onWatchlistFilterSelected(filter)
+                        onNavigateToTab(MoviesTab.WATCHLIST)
+                    },
+                    onGenreClick = { genre ->
+                        onDiscoverFiltersChanged(state.discoverFilters.copy(genres = setOf(genre)))
+                        onNavigateToTab(MoviesTab.DISCOVER)
+                    },
+                    onMovieClick = onMovieClick,
                 )
             }
+            bottomNavSpacer()
         }
+    }
+}
 
-        item {
-            Spacer(Modifier.height(104.dp))
-            Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
-        }
+private const val TAB_ANIM_MS = 280
+
+/** Clearance so list content scrolls out from under the floating bottom nav. */
+private fun androidx.compose.foundation.lazy.LazyListScope.bottomNavSpacer() {
+    item {
+        Spacer(Modifier.height(104.dp))
+        Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
     }
 }
 
@@ -867,6 +948,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.watchlistContent(
     onSortSelected: (WatchlistSort) -> Unit,
     onMovieClick: (Long, com.example.tmdb.domain.model.MediaType) -> Unit,
     onWatchlistToggle: (MovieListItem) -> Unit,
+    onBrowseDiscoverClick: () -> Unit,
 ) {
     val filteredItems = items.filteredBy(selectedFilter).sortedBy(selectedSort)
     item {
@@ -910,15 +992,21 @@ private fun androidx.compose.foundation.lazy.LazyListScope.watchlistContent(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 contentPadding = PaddingValues(16.dp),
             ) {
-                Text(
-                    text = if (items.isEmpty()) {
-                        "Your cinematic queue is empty."
-                    } else {
-                        "No titles match this watchlist filter."
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = if (items.isEmpty()) {
+                            "Your cinematic queue is empty."
+                        } else {
+                            "No titles match the \"${selectedFilter.label}\" filter."
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    GradientPrimaryButton(
+                        text = "Browse Discover",
+                        onClick = onBrowseDiscoverClick,
+                    )
+                }
             }
         }
         return
@@ -932,6 +1020,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.watchlistContent(
             isWatchlisted = item.movie.mediaKey in watchlistKeys,
             onMovieClick = onMovieClick,
             onWatchlistToggle = onWatchlistToggle,
+            // Rows glide to their new spots when the filter or sort changes.
+            modifier = Modifier.animateItem(),
         )
     }
 }
@@ -942,8 +1032,9 @@ private fun WatchlistResultRow(
     isWatchlisted: Boolean,
     onMovieClick: (Long, com.example.tmdb.domain.model.MediaType) -> Unit,
     onWatchlistToggle: (MovieListItem) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(horizontal = 16.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = modifier.padding(horizontal = 16.dp)) {
         SearchResultRow(
             movie = item.movie,
             isWatchlisted = isWatchlisted,
@@ -978,6 +1069,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.profileContent(
     items: List<WatchlistItemUi>,
     selectedTheme: AppTheme,
     onThemeSelected: (AppTheme) -> Unit,
+    onMetricClick: (WatchlistFilter) -> Unit,
+    onGenreClick: (MovieGenre) -> Unit,
+    onMovieClick: (Long, com.example.tmdb.domain.model.MediaType) -> Unit,
 ) {
     val savedCount = items.size
     val movieCount = items.count { it.movie.mediaType == com.example.tmdb.domain.model.MediaType.MOVIE }
@@ -987,7 +1081,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.profileContent(
     val favoriteCount = items.count { it.favorite }
     val averageUserRating = items.mapNotNull { it.userRating }.takeIf { it.isNotEmpty() }?.average()
     val recentNotes = items.filter { it.notes.isNotBlank() }.take(3)
-    val favoriteGenres = items.favoriteGenreNames()
+    val favoriteGenres = items.favoriteGenres()
 
     item {
         Column(
@@ -1000,21 +1094,40 @@ private fun androidx.compose.foundation.lazy.LazyListScope.profileContent(
                 .testTag(MoviesTestTags.PROFILE),
         ) {
             Text(text = "Profile", style = MaterialTheme.typography.headlineSmall)
-            ProfileMetricRow(
-                label = "Saved titles",
-                value = savedCount.toString(),
+            Text(
+                text = "Your activity at a glance — tap a card to open its list.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            ProfileMetricRow(label = "Movies / Series", value = "$movieCount / $seriesCount")
-            ProfileMetricRow(label = "Watching / Completed", value = "$watchingCount / $completedCount")
-            ProfileMetricRow(label = "Favorites", value = favoriteCount.toString())
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ProfileStatCard(label = "Saved titles", value = savedCount.toString(), onClick = { onMetricClick(WatchlistFilter.ALL) })
+                ProfileStatCard(label = "Favorites", value = favoriteCount.toString(), onClick = { onMetricClick(WatchlistFilter.FAVORITES) })
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ProfileStatCard(label = "Movies", value = movieCount.toString(), onClick = { onMetricClick(WatchlistFilter.MOVIES) })
+                ProfileStatCard(label = "Series", value = seriesCount.toString(), onClick = { onMetricClick(WatchlistFilter.SERIES) })
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ProfileStatCard(label = "Watching", value = watchingCount.toString(), onClick = { onMetricClick(WatchlistFilter.WATCHING) })
+                ProfileStatCard(label = "Completed", value = completedCount.toString(), onClick = { onMetricClick(WatchlistFilter.COMPLETED) })
+            }
             ProfileMetricRow(label = "Average user rating", value = averageUserRating?.let { String.format(java.util.Locale.US, "%.1f", it) } ?: "Not rated")
             if (favoriteGenres.isNotEmpty()) {
                 GlassSurface(contentPadding = PaddingValues(14.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(text = "Favorite genres", style = MaterialTheme.typography.titleMedium)
+                        Text(text = "Favorite genres", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "Tap a genre to explore it in Discover.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(favoriteGenres) { genre ->
-                                FilterChipPill(text = genre, selected = true, onClick = {})
+                            items(favoriteGenres, key = { it.id }) { genre ->
+                                FilterChipPill(
+                                    text = genre.displayName,
+                                    selected = true,
+                                    onClick = { onGenreClick(genre) },
+                                )
                             }
                         }
                     }
@@ -1023,7 +1136,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.profileContent(
             GlassSurface(contentPadding = PaddingValues(14.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(text = "Theme", style = MaterialTheme.typography.titleMedium)
+                        Text(text = "Theme", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Text(
                             text = "Pick a light or dark palette · ${selectedTheme.displayName}",
                             style = MaterialTheme.typography.bodySmall,
@@ -1039,21 +1152,81 @@ private fun androidx.compose.foundation.lazy.LazyListScope.profileContent(
             if (recentNotes.isNotEmpty()) {
                 GlassSurface(contentPadding = PaddingValues(14.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(text = "Recent notes", style = MaterialTheme.typography.titleMedium)
+                        Text(text = "Recent notes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         recentNotes.forEach { item ->
-                            Text(
-                                text = "${item.movie.title}: ${item.notes}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                            )
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(2.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { onMovieClick(item.movie.id, item.movie.mediaType) }
+                                    .padding(6.dp),
+                            ) {
+                                Text(
+                                    text = item.movie.title,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                Text(
+                                    text = item.notes,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
                         }
                     }
                 }
             }
             ProfileMetricRow(label = "Data source", value = "TMDB")
-            ProfileMetricRow(label = "Navigation", value = "Home, Discover, Watchlist, Profile")
+        }
+    }
+}
+
+/** Tappable stat tile that deep-links into the watchlist pre-filtered to its metric. */
+@Composable
+private fun RowScope.ProfileStatCard(
+    label: String,
+    value: String,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.14f)),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .weight(1f)
+            .testTag(MoviesTestTags.profileStat(label)),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(14.dp),
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "Open $label",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -1347,17 +1520,40 @@ private fun WatchlistButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    IconButton(
+    // Modern frosted toggle: translucent glass when unsaved, a filled accent disc with a
+    // gentle spring pop + shadow once saved. Matches the detail-screen save button.
+    val container by animateColorAsState(
+        targetValue = if (isWatchlisted) MaterialTheme.colorScheme.secondary else Color.Black.copy(alpha = 0.38f),
+        label = "watchlistContainer",
+    )
+    val iconTint by animateColorAsState(
+        targetValue = if (isWatchlisted) MaterialTheme.colorScheme.onSecondary else Color.White,
+        label = "watchlistTint",
+    )
+    val scale by animateFloatAsState(
+        targetValue = if (isWatchlisted) 1.12f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "watchlistScale",
+    )
+    Surface(
         onClick = onClick,
+        shape = CircleShape,
+        color = container,
+        border = if (isWatchlisted) null else BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
+        shadowElevation = if (isWatchlisted) 6.dp else 0.dp,
         modifier = modifier
-            .background(Color.Black.copy(alpha = 0.52f), RoundedCornerShape(18.dp))
+            .size(36.dp)
+            .scale(scale)
             .testTag(MoviesTestTags.WATCHLIST_TOGGLE),
     ) {
-        Icon(
-            imageVector = Icons.Filled.Star,
-            contentDescription = if (isWatchlisted) "Remove from watchlist" else "Add to watchlist",
-            tint = if (isWatchlisted) MaterialTheme.colorScheme.secondary else Color.White.copy(alpha = 0.82f),
-        )
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = Icons.Filled.Star,
+                contentDescription = if (isWatchlisted) "Remove from watchlist" else "Add to watchlist",
+                tint = iconTint,
+                modifier = Modifier.size(19.dp),
+            )
+        }
     }
 }
 
@@ -1406,7 +1602,20 @@ private fun BottomNavButton(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val contentColor = if (selected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant
+    // Selection animates: tint and pill colour ease over, the icon pops with a spring.
+    val contentColor by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant,
+        label = "navTint",
+    )
+    val pillColor by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.secondary.copy(alpha = 0.16f) else Color.Transparent,
+        label = "navPill",
+    )
+    val iconScale by animateFloatAsState(
+        targetValue = if (selected) 1.15f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "navScale",
+    )
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -1415,7 +1624,7 @@ private fun BottomNavButton(
             .clickable(onClick = onClick),
     ) {
         Surface(
-            color = if (selected) MaterialTheme.colorScheme.secondary.copy(alpha = 0.16f) else Color.Transparent,
+            color = pillColor,
             contentColor = contentColor,
             shape = RoundedCornerShape(18.dp),
         ) {
@@ -1424,7 +1633,8 @@ private fun BottomNavButton(
                 contentDescription = item.label,
                 modifier = Modifier
                     .padding(horizontal = 14.dp, vertical = 6.dp)
-                    .size(22.dp),
+                    .size(22.dp)
+                    .scale(iconScale),
             )
         }
         Text(
@@ -1469,6 +1679,7 @@ private fun MoviesHomePreview() {
             onDiscoverFiltersChanged = {},
             onDiscoverFiltersReset = {},
             onTabSelected = {},
+            onTabBack = { false },
             onWatchlistFilterSelected = {},
             onWatchlistSortSelected = {},
             onWatchlistToggle = {},

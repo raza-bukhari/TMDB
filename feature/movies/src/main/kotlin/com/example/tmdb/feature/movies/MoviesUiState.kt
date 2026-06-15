@@ -147,7 +147,7 @@ internal fun List<WatchlistItemUi>.sortedBy(sort: WatchlistSort): List<Watchlist
     WatchlistSort.TITLE -> sortedBy { it.movie.title.lowercase() }
 }
 
-internal fun List<WatchlistItemUi>.favoriteGenreNames(limit: Int = 5): List<String> {
+internal fun List<WatchlistItemUi>.favoriteGenres(limit: Int = 5): List<MovieGenre> {
     val weightedGenreCounts = flatMap { item ->
         val weight = when {
             item.favorite -> 4
@@ -162,9 +162,12 @@ internal fun List<WatchlistItemUi>.favoriteGenreNames(limit: Int = 5): List<Stri
 
     return weightedGenreCounts.entries
         .sortedWith(compareByDescending<Map.Entry<Int, Int>> { it.value }.thenBy { it.key })
-        .mapNotNull { MovieGenre.fromId(it.key)?.displayName }
+        .mapNotNull { MovieGenre.fromId(it.key) }
         .take(limit)
 }
+
+internal fun List<WatchlistItemUi>.favoriteGenreNames(limit: Int = 5): List<String> =
+    favoriteGenres(limit).map { it.displayName }
 
 internal fun MovieListItem.toDomainMovie(): Movie = Movie(
     id = MovieId(id),
